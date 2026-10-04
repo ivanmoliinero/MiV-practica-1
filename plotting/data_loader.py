@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 import pandas as pd
 
+from state_centroids import STATE_TO_ABBREV
+
 try:
     import streamlit as st
     cache_data_decorator = st.cache_data
@@ -18,21 +20,25 @@ except ImportError:
 
 # Standard categories and corresponding hex colors for the discrete colorscale
 COLOR_CATEGORIES: List[str] = [
-    "DEM",         # 0: Democrat Blue
-    "REP",         # 1: Republican Red
-    "IND",         # 2: Independent Purple
-    "TOSS_UP",     # 3: Poll Toss-Up Amber
-    "NO_DATA",     # 4: No Poll Data Slate
-    "SAFE_MUTED",  # 5: Muted background for non-contested seats
+    "DEM",         # 0: Solid Democrat Blue
+    "DEM_LEAN",    # 1: Soft Light Democrat Blue (Toss-Up <= 2.0 pp DEM lead)
+    "REP",         # 2: Solid Republican Red
+    "REP_LEAN",    # 3: Soft Light Republican Red (Toss-Up <= 2.0 pp REP lead)
+    "TIE",         # 4: Soft Violet for exact ties (0.0 pp)
+    "IND",         # 5: Golden Yellow for Independents
+    "NO_DATA",     # 6: Slate Gray for contested races with no poll data yet
+    "SAFE_MUTED",  # 7: Light Gray for safe seats in polls-only view
 ]
 
 COLOR_PALETTE: Dict[str, str] = {
-    "DEM": "#2563EB",         # Strong Democrat Blue
-    "REP": "#DC2626",         # Strong Republican Red
-    "IND": "#7C3AED",         # Purple for Independents
-    "TOSS_UP": "#F59E0B",     # Amber / Yellow-Orange
+    "DEM": "#2563EB",         # Solid Democrat Blue
+    "DEM_LEAN": "#93C5FD",    # Soft Light Democrat Blue (Lean / Toss-Up DEM <= 2.0 pp)
+    "REP": "#DC2626",         # Solid Republican Red
+    "REP_LEAN": "#FCA5A5",    # Soft Light Republican Red (Lean / Toss-Up REP <= 2.0 pp)
+    "TIE": "#C084FC",         # Soft Violet for exact ties
+    "IND": "#EAB308",         # Golden Yellow for Independents
     "NO_DATA": "#64748B",     # Slate Gray
-    "SAFE_MUTED": "#E2E8F0",  # Light gray-slate
+    "SAFE_MUTED": "#E2E8F0",  # Light Muted Gray
 }
 
 CATEGORY_TO_INT: Dict[str, int] = {cat: i for i, cat in enumerate(COLOR_CATEGORIES)}
@@ -41,23 +47,6 @@ CATEGORY_TO_INT: Dict[str, int] = {cat: i for i, cat in enumerate(COLOR_CATEGORI
 BASE_DIR = Path(__file__).resolve().parent.parent / "data-fetching" / "results"
 COMPOSITION_CSV = BASE_DIR / "senate_current_composition.csv"
 POLLS_CSV = BASE_DIR / "senate_2026_polls.csv"
-
-# Standard 2-letter state abbreviations
-STATE_TO_ABBREV: Dict[str, str] = {
-    "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR",
-    "California": "CA", "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE",
-    "Florida": "FL", "Georgia": "GA", "Hawaii": "HI", "Idaho": "ID",
-    "Illinois": "IL", "Indiana": "IN", "Iowa": "IA", "Kansas": "KS",
-    "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD",
-    "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN", "Mississippi": "MS",
-    "Missouri": "MO", "Montana": "MT", "Nebraska": "NE", "Nevada": "NV",
-    "New Hampshire": "NH", "New Jersey": "NJ", "New Mexico": "NM", "New York": "NY",
-    "North Carolina": "NC", "North Dakota": "ND", "Ohio": "OH", "Oklahoma": "OK",
-    "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI", "South Carolina": "SC",
-    "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX", "Utah": "UT",
-    "Vermont": "VT", "Virginia": "VA", "Washington": "WA", "West Virginia": "WV",
-    "Wisconsin": "WI", "Wyoming": "WY",
-}
 
 
 def load_composition_csv(path: Optional[Path] = None) -> pd.DataFrame:
@@ -78,7 +67,15 @@ def load_polls_csv(path: Optional[Path] = None) -> pd.DataFrame:
 
 def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
     """
-    Compute poll aggregates (leader, margin, DEM %, REP %, count) for a given state.
+    Compute poll aggregates (leader, sub_category, margin, DEM %, REP %, count) for a given state.
+
+    Categorization:
+    - DEM lead > 2.0 pp -> 'DEM' (Solid Blue)
+    - DEM lead <= 2.0 pp -> 'DEM_LEAN' (Soft Light Blue)
+    - REP lead > 2.0 pp -> 'REP' (Solid Red)
+    - REP lead <= 2.0 pp -> 'REP_LEAN' (Soft Light Red)
+    - Exact 0.0 pp tie -> 'TIE' (Soft Violet)
+    - No polling numbers -> 'NO_DATA' (Slate Gray)
     """
     state_polls = polls_df[polls_df["estado"] == state].copy()
     valid_polls = state_polls[
@@ -120,22 +117,35 @@ def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
         margin = round(mean_dem - mean_rep, 1)
         if margin > 2.0:
             leader = "DEM"
+            sub_category = "DEM"
+        elif 0 < margin <= 2.0:
+            leader = "DEM"
+            sub_category = "DEM_LEAN"
         elif margin < -2.0:
             leader = "REP"
+            sub_category = "REP"
+        elif -2.0 <= margin < 0:
+            leader = "REP"
+            sub_category = "REP_LEAN"
         else:
-            leader = "TOSS_UP"
+            leader = "TIE"
+            sub_category = "TIE"
     elif mean_dem is not None and pd.notna(mean_dem):
         margin = None
         leader = "DEM"
+        sub_category = "DEM"
     elif mean_rep is not None and pd.notna(mean_rep):
         margin = None
         leader = "REP"
+        sub_category = "REP"
     else:
         margin = None
         leader = "NO_DATA"
+        sub_category = "NO_DATA"
 
     return {
         "leader": leader,
+        "sub_category": sub_category,
         "margin": margin,
         "mean_dem": mean_dem,
         "mean_rep": mean_rep,
@@ -169,19 +179,24 @@ def _build_tooltip(
         lines.append(f"⚡ <b>2026 Senate Race:</b> {election_type}")
         if poll_data:
             leader = poll_data["leader"]
+            sub_cat = poll_data["sub_category"]
             margin = poll_data["margin"]
             n_polls = poll_data["n_polls"]
             dem_avg = f"{poll_data['mean_dem']:.1f}%" if poll_data["mean_dem"] is not None and pd.notna(poll_data["mean_dem"]) else "N/A"
             rep_avg = f"{poll_data['mean_rep']:.1f}%" if poll_data["mean_rep"] is not None and pd.notna(poll_data["mean_rep"]) else "N/A"
 
-            if leader == "DEM":
-                leader_str = "Democrat Leading"
-            elif leader == "REP":
-                leader_str = "Republican Leading"
-            elif leader == "TOSS_UP":
-                leader_str = "Toss-Up Race (≤ ±2 pp)"
+            if sub_cat == "DEM":
+                forecast_desc = "Democrat Leading (> 2 pp)"
+            elif sub_cat == "DEM_LEAN":
+                forecast_desc = "Toss-Up / Slight Democrat Lead (≤ 2 pp)"
+            elif sub_cat == "REP":
+                forecast_desc = "Republican Leading (> 2 pp)"
+            elif sub_cat == "REP_LEAN":
+                forecast_desc = "Toss-Up / Slight Republican Lead (≤ 2 pp)"
+            elif sub_cat == "TIE":
+                forecast_desc = "Dead Heat / Exactly Tied (0.0 pp)"
             else:
-                leader_str = "No Poll Data Available"
+                forecast_desc = "No Poll Data Available"
 
             margin_str = f"DEM +{margin:.1f} pp" if (margin is not None and margin > 0) else (
                 f"REP +{abs(margin):.1f} pp" if (margin is not None and margin < 0) else (
@@ -189,7 +204,7 @@ def _build_tooltip(
                 )
             )
 
-            lines.append(f"<b>📊 2026 Poll Forecast:</b> {leader_str}")
+            lines.append(f"<b>📊 2026 Poll Forecast:</b> {forecast_desc}")
             if leader != "NO_DATA":
                 lines.append(f"<b>Poll Margin:</b> {margin_str}")
                 lines.append(f"<b>Averages:</b> DEM {dem_avg} | REP {rep_avg}")
@@ -229,13 +244,11 @@ def load_all_senators_data() -> pd.DataFrame:
         has_race = len(contested_rows) > 0
 
         if has_race:
-            # 1 seat is safe (left), 1 seat is up for election in 2026 (right)
             row_left = stable_rows.iloc[0]
             row_right = contested_rows.iloc[0]
             left_is_contested = False
             right_is_contested = True
         else:
-            # No race in 2026: both seats are safe, sorted deterministically
             sorted_rows = state_rows.sort_values(by="senador")
             row_left = sorted_rows.iloc[0]
             row_right = sorted_rows.iloc[1]
@@ -262,13 +275,13 @@ def load_all_senators_data() -> pd.DataFrame:
 
             # Category 2: Combined (Default view: safe seats = party, contested seats = poll result)
             if is_contested and poll_info:
-                cat_combined = poll_info["leader"]
+                cat_combined = poll_info["sub_category"]
             else:
                 cat_combined = party
 
             # Category 3: Polls only (safe seats = muted, contested = poll result)
             if is_contested and poll_info:
-                cat_polls_only = poll_info["leader"]
+                cat_polls_only = poll_info["sub_category"]
             else:
                 cat_polls_only = "SAFE_MUTED"
 
@@ -296,6 +309,7 @@ def load_all_senators_data() -> pd.DataFrame:
                 "election_type_2026": election_type,
                 "asumio_cargo": asumio_cargo,
                 "poll_leader": poll_info["leader"] if (is_contested and poll_info) else None,
+                "poll_sub_category": poll_info["sub_category"] if (is_contested and poll_info) else None,
                 "poll_margin": poll_info["margin"] if (is_contested and poll_info) else None,
                 "mean_dem": poll_info["mean_dem"] if (is_contested and poll_info) else None,
                 "mean_rep": poll_info["mean_rep"] if (is_contested and poll_info) else None,
@@ -305,7 +319,7 @@ def load_all_senators_data() -> pd.DataFrame:
                 "cat_polls_only": cat_polls_only,
                 "code_composition": CATEGORY_TO_INT.get(cat_composition, 0),
                 "code_combined": CATEGORY_TO_INT.get(cat_combined, 0),
-                "code_polls_only": CATEGORY_TO_INT.get(cat_polls_only, 5),
+                "code_polls_only": CATEGORY_TO_INT.get(cat_polls_only, 7),
                 "tooltip": tooltip,
             })
 
@@ -315,4 +329,5 @@ def load_all_senators_data() -> pd.DataFrame:
 if __name__ == "__main__":
     df = load_all_senators_data()
     print(f"Loaded {len(df)} senator half-state records.")
-    print("Sample feature IDs:", df["feature_id"].head(6).tolist())
+    print("Combined categories distribution:")
+    print(df["cat_combined"].value_counts())

@@ -6,13 +6,16 @@ Each US state is geographically divided into two halves representing its two US 
 - Internal division: Crisp white line divides each state into two senator seats.
 - Left / West half: Safe seat not up for election in 2026 (or Senator 1).
 - Right / East half: Seat up for election in 2026 (or Senator 2).
+- Dynamic transition on hover between Current Senate and 2026 Poll Predictions.
+- Accompanied by a synchronous 100-seat Pie Chart.
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from data_loader import load_all_senators_data
 from geo_splitter import generate_split_geojson, generate_state_outlines_geojson
-from map_builder import build_figure
+from map_builder import build_interactive_dashboard_html
 
 
 def set_custom_styles() -> None:
@@ -25,7 +28,7 @@ def set_custom_styles() -> None:
             border: 1px solid #E2E8F0;
             border-radius: 8px;
             padding: 14px 18px;
-            margin-top: 8px;
+            margin-top: 10px;
             font-size: 0.88rem;
             color: #1E293B;
             line-height: 1.6;
@@ -47,7 +50,7 @@ def set_custom_styles() -> None:
 
 def main() -> None:
     st.set_page_config(
-        page_title="US Senate 2026 — Geographic Seat Map",
+        page_title="US Senate 2026 — Geographic Seat Map & Composition",
         page_icon="🗳️",
         layout="wide",
         initial_sidebar_state="collapsed",
@@ -56,41 +59,21 @@ def main() -> None:
     set_custom_styles()
 
     # Title and concise description
-    st.title("🗳️ US Senate 2026 — Interactive Geographic Representation")
+    st.title("🗳️ US Senate 2026 — Interactive Geographic Representation & Balance")
     st.caption(
-        "Each state is clearly bounded by black borders and divided internally by a white line "
-        "into two halves representing its two US Senators. The left (west) half depicts the safe seat "
-        "not up for election, while the right (east) half depicts the seat up for election in 2026. "
-        "Hover over any half for detailed senator and polling data."
+        "Each state is bounded by a black border and divided internally by a white line into two halves "
+        "representing its two US Senators. Hover over the tabs or the map to transition between "
+        "Current Senate Composition and 2026 Poll Predictions with a dynamic color gradient."
     )
-
-    # View Mode Selection Radio
-    view_label = st.radio(
-        "Select Map View Mode:",
-        options=[
-            "🏛️ Current Situation + 2026 Polls (Default: Safe Incumbents + Poll Predictions)",
-            "📋 Current Senate Composition (All 100 Incumbent Senators)",
-            "📊 2026 Contested Races Highlighted (Safe Seats Muted)",
-        ],
-        index=0,
-        horizontal=True,
-    )
-
-    if "Current Situation" in view_label:
-        active_view = "combined"
-    elif "Current Senate Composition" in view_label:
-        active_view = "composition"
-    else:
-        active_view = "polls_only"
 
     # Load data and GeoJSON collections
     senators_df = load_all_senators_data()
     split_geojson = generate_split_geojson()
     outlines_geojson = generate_state_outlines_geojson()
 
-    # Render interactive Plotly choropleth
-    fig = build_figure(senators_df, split_geojson, outlines_geojson, view=active_view)
-    st.plotly_chart(fig, width="stretch")
+    # Render interactive client-side dashboard (Map + Pie Chart with hover gradient transition)
+    dashboard_html = build_interactive_dashboard_html(senators_df, split_geojson, outlines_geojson)
+    components.html(dashboard_html, height=660, scrolling=False)
 
     # Clean Visual Legend
     leg_col1, leg_col2 = st.columns(2)
@@ -100,12 +83,12 @@ def main() -> None:
             """
             <div class="legend-card">
                 <b>🎨 Color Legend:</b><br>
-                <div><span class="color-badge" style="background-color: #2563EB;"></span> <b>Blue:</b> Democratic Party / Democrat Leading in Polls</div>
-                <div><span class="color-badge" style="background-color: #DC2626;"></span> <b>Red:</b> Republican Party / Republican Leading in Polls</div>
-                <div><span class="color-badge" style="background-color: #7C3AED;"></span> <b>Purple:</b> Independent Senator</div>
-                <div><span class="color-badge" style="background-color: #F59E0B;"></span> <b>Amber:</b> Toss-Up Race (Poll margin ≤ ±2.0 pp)</div>
+                <div><span class="color-badge" style="background-color: #2563EB;"></span> <b>Solid Blue:</b> Democratic Incumbent / Solid Democrat Lead (> 2 pp)</div>
+                <div><span class="color-badge" style="background-color: #93C5FD;"></span> <b>Light Blue:</b> Toss-Up Race — Slight Democrat Lead (≤ 2 pp)</div>
+                <div><span class="color-badge" style="background-color: #DC2626;"></span> <b>Solid Red:</b> Republican Incumbent / Solid Republican Lead (> 2 pp)</div>
+                <div><span class="color-badge" style="background-color: #FCA5A5;"></span> <b>Light Red:</b> Toss-Up Race — Slight Republican Lead (≤ 2 pp)</div>
+                <div><span class="color-badge" style="background-color: #EAB308;"></span> <b>Golden Yellow:</b> Independent Senator</div>
                 <div><span class="color-badge" style="background-color: #64748B;"></span> <b>Slate Gray:</b> Contested seat with no poll data yet</div>
-                <div><span class="color-badge" style="background-color: #E2E8F0;"></span> <b>Light Gray:</b> Safe seat (in contested-only view)</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -120,7 +103,7 @@ def main() -> None:
                 • <b>Inner White Line:</b> Divides each state into its two Senate seats.<br>
                 • <b>Left (West) Half:</b> Safe senator not up for election in 2026.<br>
                 • <b>Right (East) Half:</b> Contested seat up for election in 2026.<br>
-                • <b>Interactivity:</b> Hover over either half of any state to inspect incumbent names, terms, vote margins, and poll averages.
+                • <b>Interactivity:</b> Hover over the top pills or the map to morph between Current Senate (53-45-2) and 2026 Polls (44 DEM, 43 REP, 6 Toss-Up). Click to pin.
             </div>
             """,
             unsafe_allow_html=True,
