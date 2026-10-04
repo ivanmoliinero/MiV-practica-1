@@ -359,30 +359,6 @@ def build_interactive_dashboard_html(
         colorscale_items.append([i / k, color])
         colorscale_items.append([(i + 1) / k, color])
 
-    # Build Flip Ledger HTML rows
-    dem_flips_html = ""
-    rep_flips_html = ""
-    for f in flips:
-        st_name = f["state"]
-        ab = f["abbrev"]
-        inc = f["party"]
-        leader = f["poll_leader"]
-        margin = f["poll_margin"]
-        margin_str = f"+{margin:.1f} pp" if margin and margin > 0 else (f"{margin:.1f} pp" if margin else "N/A")
-
-        row_html = f"""
-            <div class="flip-card {'dem-card' if leader == 'DEM' else 'rep-card'}">
-              <span class="flip-icon {'dem-icon' if leader == 'DEM' else 'rep-icon'}">⇄</span>
-              <div class="flip-info">
-                <span class="flip-name"><b>{st_name}</b> <span class="flip-abbrev">{ab}</span></span>
-                <span class="flip-shift">{inc} → <b>{leader}</b></span>
-              </div>
-              <span class="flip-lead {'dem-lead' if leader == 'DEM' else 'rep-lead'}"><b>{margin_str}</b></span>
-            </div>"""
-        if leader == "DEM":
-            dem_flips_html += row_html
-        else:
-            rep_flips_html += row_html
 
     debug_badge_tag = (
         f'<span style="font-size:0.70rem; background:#D97706; color:#FFFFFF; padding:2px 7px; border-radius:4px; margin-left:8px; font-weight:700; vertical-align:middle;">'
@@ -408,7 +384,7 @@ def build_interactive_dashboard_html(
     }}
     .dashboard-grid {{
       display: grid;
-      grid-template-columns: 1.35fr 1fr;
+      grid-template-columns: 1.45fr 1fr;
       gap: 18px;
       height: 675px;
     }}
@@ -427,130 +403,60 @@ def build_interactive_dashboard_html(
       background: #0F172A;
       border: 1px solid #334155;
       border-radius: 12px;
-      padding: 16px 18px;
+      padding: 24px 22px;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      justify-content: center;
+      gap: 22px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-      overflow-y: auto;
     }}
 
     /* Panel Header */
     .panel-header {{
       border-bottom: 1px solid #1E293B;
-      padding-bottom: 8px;
-      margin-bottom: 10px;
+      padding-bottom: 12px;
     }}
     .panel-title {{
-      font-size: 1.12rem;
+      font-size: 1.18rem;
       font-weight: 700;
       color: #F8FAFC;
       letter-spacing: -0.01em;
     }}
     .panel-subtitle {{
-      font-size: 0.82rem;
+      font-size: 0.84rem;
       color: #94A3B8;
-      margin-top: 2px;
-    }}
-
-    /* Tally Scoreboard */
-    .tally-grid {{
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 10px;
-    }}
-    .tally-box {{
-      background: #1E293B;
-      border-radius: 8px;
-      padding: 9px 12px;
-      border-left: 4px solid #64748B;
-    }}
-    .tally-box.dem-box {{
-      border-left-color: #38BDF8;
-      background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(14, 116, 144, 0.25));
-    }}
-    .tally-box.rep-box {{
-      border-left-color: #F87171;
-      background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(185, 28, 28, 0.20));
-    }}
-    .tally-header-row {{
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 4px;
-    }}
-    .party-title {{
-      font-size: 0.76rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }}
-    .party-title.dem-title {{ color: #7DD3FC; }}
-    .party-title.rep-title {{ color: #FCA5A5; }}
-    .tally-tag {{
-      font-size: 0.70rem;
-      font-weight: 700;
-      padding: 2px 7px;
-      border-radius: 9999px;
-    }}
-    .tally-tag.win-tag {{
-      background: rgba(56, 189, 248, 0.20);
-      color: #38BDF8;
-      border: 1px solid rgba(56, 189, 248, 0.40);
-    }}
-    .tally-tag.loss-tag {{
-      background: rgba(248, 113, 113, 0.15);
-      color: #F87171;
-      border: 1px solid rgba(248, 113, 113, 0.35);
-    }}
-    .tally-big {{
-      font-size: 1.85rem;
-      font-weight: 800;
-      line-height: 1.1;
-      color: #FFFFFF;
-    }}
-    .tally-total {{
-      font-size: 0.90rem;
-      font-weight: 500;
-      color: #94A3B8;
-    }}
-    .tally-desc {{
-      font-size: 0.72rem;
-      color: #94A3B8;
-      margin-top: 3px;
+      margin-top: 4px;
     }}
 
     /* Majority 50 Threshold Bar */
     .bar-section {{
       background: #1E293B;
       border: 1px solid #334155;
-      border-radius: 8px;
-      padding: 10px 12px;
-      margin-bottom: 10px;
+      border-radius: 10px;
+      padding: 20px 20px;
     }}
     .bar-header {{
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.80rem;
-      margin-bottom: 14px;
+      font-size: 0.88rem;
+      margin-bottom: 22px;
       color: #E2E8F0;
     }}
     .bar-wrapper {{
       position: relative;
       width: 100%;
-      height: 30px;
+      height: 42px;
       background: #0B1120;
-      border-radius: 6px;
+      border-radius: 8px;
       overflow: visible;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
     }}
     .bar-track {{
       display: flex;
       width: 100%;
       height: 100%;
-      border-radius: 6px;
+      border-radius: 8px;
       overflow: hidden;
     }}
     .bar-seg {{
@@ -558,7 +464,7 @@ def build_interactive_dashboard_html(
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.70rem;
+      font-size: 0.76rem;
       font-weight: 700;
       color: #FFFFFF;
       text-shadow: 0 1px 2px rgba(0,0,0,0.8);
@@ -582,8 +488,8 @@ def build_interactive_dashboard_html(
     .majority-line {{
       position: absolute;
       left: 50%;
-      top: -10px;
-      bottom: -10px;
+      top: -12px;
+      bottom: -12px;
       width: 2.5px;
       background: #F8FAFC;
       box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
@@ -592,14 +498,14 @@ def build_interactive_dashboard_html(
     }}
     .majority-label-pin {{
       position: absolute;
-      top: -22px;
+      top: -26px;
       left: 50%;
       transform: translateX(-50%);
       background: #F8FAFC;
       color: #0F172A;
-      font-size: 0.68rem;
+      font-size: 0.72rem;
       font-weight: 800;
-      padding: 1px 6px;
+      padding: 2px 8px;
       border-radius: 4px;
       white-space: nowrap;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
@@ -608,115 +514,43 @@ def build_interactive_dashboard_html(
     .bar-sublegend {{
       display: flex;
       justify-content: space-between;
-      font-size: 0.72rem;
-      color: #94A3B8;
-      margin-top: 4px;
-    }}
-
-    /* Flip Ledger Section */
-    .ledger-section {{
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }}
-    .ledger-title {{
       font-size: 0.82rem;
-      font-weight: 700;
-      color: #F8FAFC;
-      margin-bottom: 6px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      color: #94A3B8;
+      margin-top: 8px;
     }}
-    .ledger-grid {{
-      display: grid;
-      grid-template-columns: 1.25fr 1fr;
-      gap: 10px;
-    }}
-    .flip-col-header {{
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      margin-bottom: 5px;
-    }}
-    .flip-col-header.dem-head {{ color: #38BDF8; }}
-    .flip-col-header.rep-head {{ color: #F87171; }}
 
-    .flip-card {{
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    /* Segment Color Key */
+    .bar-legend-card {{
       background: #1E293B;
-      border-radius: 6px;
-      padding: 4px 8px;
-      margin-bottom: 3.5px;
-      font-size: 0.75rem;
       border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 16px 18px;
     }}
-    .flip-card.dem-card {{ border-left: 3px solid #38BDF8; }}
-    .flip-card.rep-card {{ border-left: 3px solid #F87171; }}
-
-    .flip-icon {{
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      font-size: 0.70rem;
-      font-weight: 900;
-      color: #FFFFFF;
-      margin-right: 6px;
-      flex-shrink: 0;
-    }}
-    .flip-icon.dem-icon {{ background: #2563EB; }}
-    .flip-icon.rep-icon {{ background: #DC2626; }}
-    .flip-info {{
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-    }}
-    .flip-name {{
-      color: #F8FAFC;
-      line-height: 1.1;
-    }}
-    .flip-abbrev {{
-      font-size: 0.70rem;
+    .legend-card-title {{
+      font-size: 0.76rem;
+      font-weight: 700;
       color: #94A3B8;
-      font-weight: 600;
-    }}
-    .flip-shift {{
-      font-size: 0.68rem;
-      color: #94A3B8;
-    }}
-    .flip-lead.dem-lead {{ color: #38BDF8; font-size: 0.78rem; }}
-    .flip-lead.rep-lead {{ color: #F87171; font-size: 0.78rem; }}
-
-    .net-summary-box {{
-      background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(14, 116, 144, 0.3));
-      border: 1px solid #0284C7;
-      border-radius: 8px;
-      padding: 10px 12px;
-      margin-top: 6px;
-    }}
-    .net-box-title {{
-      font-size: 0.72rem;
-      font-weight: 800;
-      color: #38BDF8;
-      letter-spacing: 0.04em;
       text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
     }}
-    .net-box-val {{
-      font-size: 1.05rem;
-      font-weight: 800;
-      color: #FFFFFF;
-      margin: 2px 0;
+    .bar-legend-grid {{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 14px;
+      font-size: 0.78rem;
+      color: #E2E8F0;
     }}
-    .net-box-desc {{
-      font-size: 0.72rem;
-      color: #CBD5E1;
-      line-height: 1.3;
+    .legend-item {{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }}
+    .legend-swatch {{
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      flex-shrink: 0;
     }}
 
     /* Map styling */
@@ -748,40 +582,19 @@ def build_interactive_dashboard_html(
     <!-- Map Container -->
     <div id="map-container"></div>
 
-    <!-- Balance of Power & Flip Ledger Panel -->
+    <!-- Balance of Power Seat Balance Panel -->
     <div id="balance-panel">
       <!-- Header -->
       <div class="panel-header">
-        <div class="panel-title">🏛️ 2026 US Senate Balance of Power</div>
+        <div class="panel-title">🏛️ 2026 US Senate Seat Balance {debug_badge_tag}</div>
         <div class="panel-subtitle">100 Seats Total • <b>50 Seats</b> Threshold for Chamber Majority</div>
       </div>
 
-      <!-- Tally Scoreboard -->
-      <div class="tally-grid">
-        <div class="tally-box dem-box">
-          <div class="tally-header-row">
-            <span class="party-title dem-title">DEMOCRATIC COALITION</span>
-            <span class="tally-tag win-tag">+5 MAJORITY</span>
-          </div>
-          <div class="tally-big">{summary['projected_dem_total']} <span class="tally-total">/ 100</span></div>
-          <div class="tally-desc">47 Poll Leads + 2 IND + 3 Safe Unpolled</div>
-        </div>
-
-        <div class="tally-box rep-box">
-          <div class="tally-header-row">
-            <span class="party-title rep-title">REPUBLICAN PARTY</span>
-            <span class="tally-tag loss-tag">-5 MINORITY</span>
-          </div>
-          <div class="tally-big">{summary['projected_rep_total']} <span class="tally-total">/ 100</span></div>
-          <div class="tally-desc">46 Poll Leads + 2 Safe Unpolled</div>
-        </div>
-      </div>
-
-      <!-- Majority 50 Threshold Bar -->
+      <!-- Majority 50 Threshold Bar Section -->
       <div class="bar-section">
         <div class="bar-header">
           <span><b>Seat Balance Bar (0 to 100):</b></span>
-          <span style="color: #38BDF8; font-weight: 700;">DEM crosses 50-Seat Mark</span>
+          <span style="color: #38BDF8; font-weight: 700; font-size: 0.88rem;">DEM crosses 50-Seat Mark (52 DEM vs. 48 REP)</span>
         </div>
 
         <div class="bar-wrapper">
@@ -789,44 +602,32 @@ def build_interactive_dashboard_html(
           <div class="majority-line"></div>
           <div class="bar-track">
             <div class="bar-seg seg-dem-safe" style="width: {summary['safe_dem_ind']}%;" title="{summary['safe_dem_ind']} Safe Democratic & Independent Seats">{summary['safe_dem_ind']} Safe</div>
-            <div class="bar-seg seg-dem-holds" style="width: {summary['dem_holds']}%;" title="{summary['dem_holds']} Democratic Poll Holds">{summary['dem_holds']}</div>
-            <div class="bar-seg seg-dem-flips" style="width: {summary['dem_flips']}%;" title="{summary['dem_flips']} Democratic Flips from GOP (AK, KY, ME, NE, NC, OH)">★ +6</div>
+            <div class="bar-seg seg-dem-holds" style="width: {summary['dem_holds']}%;" title="{summary['dem_holds']} Democratic Poll Holds">{summary['dem_holds']} Holds</div>
+            <div class="bar-seg seg-dem-flips" style="width: {summary['dem_flips']}%;" title="{summary['dem_flips']} Democratic Flips from GOP (AK, KY, ME, NE, NC, OH)">+6★</div>
             <div class="bar-seg seg-unpolled" style="width: {summary['unpolled']}%;" title="{summary['unpolled']} Seats with No General Election Polls (3 DEM safe, 2 REP safe)">5</div>
-            <div class="bar-seg seg-rep-flips" style="width: {summary['rep_flips']}%;" title="{summary['rep_flips']} Republican Flip from DEM (MI)">★ +1</div>
-            <div class="bar-seg seg-rep-holds" style="width: {summary['rep_holds']}%;" title="{summary['rep_holds']} Republican Poll Holds">{summary['rep_holds']}</div>
+            <div class="bar-seg seg-rep-flips" style="width: {summary['rep_flips']}%;" title="{summary['rep_flips']} Republican Flip from DEM (MI)"></div>
+            <div class="bar-seg seg-rep-holds" style="width: {summary['rep_holds']}%;" title="{summary['rep_holds']} Republican Poll Holds">{summary['rep_holds']} Holds</div>
             <div class="bar-seg seg-rep-safe" style="width: {summary['safe_rep']}%;" title="{summary['safe_rep']} Safe Republican Seats">{summary['safe_rep']} Safe</div>
           </div>
         </div>
 
         <div class="bar-sublegend">
-          <span>🔵 <b>49</b> Direct Leads/Safe</span>
-          <span>⚪ <b>5</b> Unpolled (3 DEM safe)</span>
-          <span>🔴 <b>46</b> Direct Leads/Safe</span>
+          <span>🔵 <b>{summary['projected_dem_total']} DEM Coalition</b> (34 Safe + 9 Holds + 6 Flips + 3 Unpolled)</span>
+          <span>🔴 <b>{summary['projected_rep_total']} Republican Party</b> (31 Safe + 14 Holds + 1 Flip + 2 Unpolled)</span>
         </div>
       </div>
 
-      <!-- Flip Ledger -->
-      <div class="ledger-section">
-        <div class="ledger-title">
-          <span>⚡ 7 Decisive Battleground Flips (Poll Predictions) {debug_badge_tag}</span>
-        </div>
-        <div class="ledger-grid">
-          <div>
-            <div class="flip-col-header dem-head">🔵 Flips to Democrat (+6 Seats)</div>
-            {dem_flips_html}
-          </div>
-          <div>
-            <div class="flip-col-header rep-head">🔴 Flip to Republican (+1 Seat)</div>
-            {rep_flips_html}
-
-            <div class="net-summary-box">
-              <div class="net-box-title">🏁 Net Projection</div>
-              <div class="net-box-val">+5 Seats to Democrats</div>
-              <div class="net-box-desc">
-                Democrats overcome the 53-47 Republican majority, flipping the chamber to <b>52 DEM vs. 48 REP</b>.
-              </div>
-            </div>
-          </div>
+      <!-- Segment Color Key -->
+      <div class="bar-legend-card">
+        <div class="legend-card-title">Seat Composition Key</div>
+        <div class="bar-legend-grid">
+          <div class="legend-item"><span class="legend-swatch" style="background:#1E40AF;"></span> <b>34</b> Safe DEM & IND</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#991B1B;"></span> <b>31</b> Safe REP</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#2563EB;"></span> <b>9</b> DEM Holds</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#DC2626;"></span> <b>14</b> REP Holds</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#0284C7; border: 1px solid #38BDF8;"></span> <b>+6</b> DEM Flips (Gain)</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#F87171;"></span> <b>+1</b> REP Flip (Gain)</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#64748B;"></span> <b>5</b> Unpolled Seats</div>
         </div>
       </div>
     </div>
