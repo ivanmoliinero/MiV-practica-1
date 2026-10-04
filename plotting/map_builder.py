@@ -20,6 +20,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from data_loader import COLOR_CATEGORIES, COLOR_PALETTE
+from state_centroids import STATE_LOWER_RIGHT_COORDS, STATE_TO_ABBREV
 
 
 def _create_discrete_colorscale() -> Tuple[List[List], float, float]:
@@ -91,7 +92,27 @@ def build_figure(
         name="State Boundaries",
     )
 
-    fig = go.Figure(data=[halves_trace, outlines_trace])
+    # Layer 3: 50 state abbreviation labels in the lower-right corner of each state
+    abbrev_lats = [STATE_LOWER_RIGHT_COORDS[STATE_TO_ABBREV[s]][0] for s in state_names]
+    abbrev_lons = [STATE_LOWER_RIGHT_COORDS[STATE_TO_ABBREV[s]][1] for s in state_names]
+    abbrev_texts = [STATE_TO_ABBREV[s] for s in state_names]
+
+    text_trace = go.Scattergeo(
+        locationmode="USA-states",
+        lon=abbrev_lons,
+        lat=abbrev_lats,
+        mode="text",
+        text=abbrev_texts,
+        textfont=dict(
+            family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif",
+            size=10,
+            color="#FFFFFF",
+        ),
+        hoverinfo="skip",
+        name="State Abbreviations",
+    )
+
+    fig = go.Figure(data=[halves_trace, outlines_trace, text_trace])
 
     fig.update_geos(
         scope="usa",
@@ -170,9 +191,7 @@ def build_pie_figure(df: pd.DataFrame, view: str = "combined") -> go.Figure:
                 marker=dict(colors=colors, line=dict(color="#0F172A", width=1.5)),
                 textinfo="value",
                 textposition="auto",
-                textfont=dict(size=14, color=text_colors),
-                hoverinfo="label+value+percent",
-                hovertemplate="<b>%{label}</b><br>Seats: %{value} (%{percent})<extra></extra>",
+                hoverinfo="skip",
             )
         ]
     )
@@ -209,6 +228,9 @@ def build_interactive_dashboard_html(
     locs = df["feature_id"].tolist()
     contested_locs = df[df["is_contested_2026"]]["feature_id"].tolist()
     state_names = [f["id"] for f in outlines_geojson["features"]]
+    abbrev_lats = [STATE_LOWER_RIGHT_COORDS[STATE_TO_ABBREV[s]][0] for s in state_names]
+    abbrev_lons = [STATE_LOWER_RIGHT_COORDS[STATE_TO_ABBREV[s]][1] for s in state_names]
+    abbrev_texts = [STATE_TO_ABBREV[s] for s in state_names]
 
     colorscale_items = []
     k = len(COLOR_CATEGORIES)
@@ -318,6 +340,21 @@ def build_interactive_dashboard_html(
     path.choroplethlocation {{
       transition: fill 0.65s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }}
+    /* Clean readable styling for state abbreviation labels in the lower-right */
+    .scattergeo, .textpoint, .textpoint text {{
+      visibility: visible !important;
+      opacity: 1 !important;
+      font-weight: 700 !important;
+      font-size: 10px !important;
+      fill: #FFFFFF !important;
+      paint-order: stroke fill !important;
+      stroke: rgba(15, 23, 42, 0.95) !important;
+      stroke-width: 2.4px !important;
+      stroke-linecap: round !important;
+      stroke-linejoin: round !important;
+      pointer-events: none !important;
+      user-select: none !important;
+    }}
   </style>
 </head>
 <body>
@@ -352,6 +389,9 @@ def build_interactive_dashboard_html(
     const colorscale = {json.dumps(colorscale_items)};
     const contestedLocs = {json.dumps(contested_locs)};
     const contestedSet = new Set(contestedLocs);
+    const abbrevLons = {json.dumps(abbrev_lons)};
+    const abbrevLats = {json.dumps(abbrev_lats)};
+    const abbrevTexts = {json.dumps(abbrev_texts)};
 
     // Map traces definition
     const mapTraceHalves = {{
@@ -386,6 +426,21 @@ def build_interactive_dashboard_html(
       }}
     }};
 
+    const mapTraceText = {{
+      type: 'scattergeo',
+      locationmode: 'USA-states',
+      lon: abbrevLons,
+      lat: abbrevLats,
+      mode: 'text',
+      text: abbrevTexts,
+      textfont: {{
+        family: '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
+        size: 10,
+        color: '#FFFFFF'
+      }},
+      hoverinfo: 'skip'
+    }};
+
     const mapLayout = {{
       geo: {{
         scope: 'usa',
@@ -408,7 +463,7 @@ def build_interactive_dashboard_html(
       }}
     }};
 
-    Plotly.newPlot('map-container', [mapTraceHalves, mapTraceOutlines], mapLayout, {{ responsive: true, displayModeBar: false }});
+    Plotly.newPlot('map-container', [mapTraceHalves, mapTraceOutlines, mapTraceText], mapLayout, {{ responsive: true, displayModeBar: false }});
 
     // Pie chart dataset 1: Current Senate Composition (100 seats: REP on right, IND in middle, DEM on left)
     const pieCompData = {{
@@ -429,7 +484,7 @@ def build_interactive_dashboard_html(
         size: 15,
         color: ['#FFFFFF', '#0F172A', '#FFFFFF']
       }},
-      hovertemplate: '<b>%{{label}}</b><br>Seats: %{{value}} (%{{percent}})<extra></extra>'
+      hoverinfo: 'skip'
     }};
 
     // Pie chart dataset 2: 2026 Poll Predictions (100 seats: identically anchored REP -> IND -> NO_DATA -> DEM)
@@ -458,7 +513,7 @@ def build_interactive_dashboard_html(
         size: 14,
         color: ['#FFFFFF', '#0F172A', '#0F172A', '#FFFFFF', '#0F172A', '#FFFFFF']
       }},
-      hovertemplate: '<b>%{{label}}</b><br>Seats: %{{value}} (%{{percent}})<extra></extra>'
+      hoverinfo: 'skip'
     }};
 
     // Pie chart dataset 3: Isolated 2026 Poll Races (35 contested seats in election)
@@ -486,7 +541,7 @@ def build_interactive_dashboard_html(
         size: 14,
         color: ['#FFFFFF', '#0F172A', '#FFFFFF', '#0F172A', '#FFFFFF']
       }},
-      hovertemplate: '<b>%{{label}}</b><br>Contested Seats: %{{value}} (%{{percent}})<extra></extra>'
+      hoverinfo: 'skip'
     }};
 
     const pieLayout = {{
@@ -576,6 +631,26 @@ def build_interactive_dashboard_html(
       overlayGroup.style.opacity = showPolls ? '1' : '0';
     }}
 
+    // Ensure state abbreviation text labels stay strictly on the top-most visual layer
+    function bringTextToFront() {{
+      const geoContainer = document.querySelector('#map-container .geo') || 
+                           document.querySelector('#map-container .geolayer');
+      const scatterGroup = document.querySelector('#map-container .scattergeo') ||
+                           document.querySelector('#map-container g.trace.scattergeo');
+      const overlayGroup = document.getElementById('contested-stroke-overlay');
+
+      if (geoContainer) {{
+        // Ensure contested dashed overlay is above choropleth
+        if (overlayGroup && overlayGroup.parentNode === geoContainer) {{
+          geoContainer.appendChild(overlayGroup);
+        }}
+        // Ensure scattergeo text labels are above everything
+        if (scatterGroup) {{
+          geoContainer.appendChild(scatterGroup);
+        }}
+      }}
+    }}
+
     function updateDashboard() {{
       const isIsolated = isolateChk.checked;
       const showPolls = isButtonHovered || isPinned || isIsolated;
@@ -611,9 +686,12 @@ def build_interactive_dashboard_html(
       // Restyle Map: CSS handles smooth dynamic gradient transition on polygon fills
       Plotly.restyle('map-container', {{ z: [targetZ] }}, [0]).then(() => {{
         updateContestedOverlay(showPolls);
+        bringTextToFront();
       }});
       // Apply immediately for instantaneous visual feedback
       updateContestedOverlay(showPolls);
+      bringTextToFront();
+      requestAnimationFrame(bringTextToFront);
 
       // Select Pie Chart dataset
       let targetPie;
@@ -633,25 +711,32 @@ def build_interactive_dashboard_html(
     hoverBtn.addEventListener('mouseenter', () => {{
       isButtonHovered = true;
       updateDashboard();
+      bringTextToFront();
     }});
 
     hoverBtn.addEventListener('mouseleave', () => {{
       isButtonHovered = false;
       updateDashboard();
+      bringTextToFront();
     }});
 
     hoverBtn.addEventListener('click', () => {{
       isPinned = !isPinned;
       updateDashboard();
+      bringTextToFront();
     }});
 
     // Checkbox Change Listener
     isolateChk.addEventListener('change', () => {{
       updateDashboard();
+      bringTextToFront();
     }});
 
-    // Initialize stroke hierarchy on first load
-    setTimeout(() => updateContestedOverlay(false), 250);
+    // Initialize stroke hierarchy and bring text to front on first load
+    setTimeout(() => {{
+      updateContestedOverlay(false);
+      bringTextToFront();
+    }}, 250);
   </script>
 </body>
 </html>
