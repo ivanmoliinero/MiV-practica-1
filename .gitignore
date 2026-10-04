@@ -1,0 +1,11 @@
+# MacOS special directories
+**/.DS_Store
+
+# Python caches
+**/__pycache__
+
+# Geojson
+**/*.geojson
+
+# Virtual environments
+**/.venv
