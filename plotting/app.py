@@ -106,6 +106,7 @@ def main() -> None:
                 • <b>Inner White Line:</b> Divides each state into its two Senate seats.<br>
                 • <b>Left (West) Half:</b> Safe senator not up for election in 2026.<br>
                 • <b>Right (East) Half:</b> Contested seat up for election in 2026.<br>
+                • <b>Contested Races Border:</b> When viewing 2026 Poll Predictions, regions up for election are clearly marked with a high-contrast dashed border around the seat (visible on both black and white borders).<br>
                 • <b>Interactivity:</b> Hover over the button to view 2026 Polls (move cursor away to return to Current Senate). Check the box to isolate only the 35 contested races.
             </div>
             """,

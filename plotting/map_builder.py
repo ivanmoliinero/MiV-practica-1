@@ -3,11 +3,13 @@ Map and chart construction module for the 2026 US Senate interactive visualizati
 
 Features:
 1. Map: 100 split half-state polygons with white internal dividers and black state perimeters.
-   No text abbreviation clutter and zero white background/lake artifacts.
+   When viewing 2026 poll predictions, the 35 contested seats in election are marked
+   with a distinct, subtle dashed white border (stroke-dasharray) that instantly identifies
+   the races in play without distracting from the color fills.
 2. Pie Chart: 100-seat (or 35-seat isolated) pie chart without center text or legend clutter.
    Displays slice numbers and locks party sectors consistently (REP on right, DEM on left).
 3. Interactive client-side dashboard with:
-   - Single hover button (enter for 2026 Polls, leave for Current Senate).
+   - Single hover button (enter for 2026 Polls, leave for Current Senate, click to lock).
    - Checkbox to isolate 2026 poll results (mutes safe seats).
    - Dynamic 60fps color gradient transitions via hardware-accelerated CSS.
 """
@@ -198,12 +200,14 @@ def build_interactive_dashboard_html(
     - Single hover button: Hover over it to view 2026 Poll Predictions, move away to return to Current Senate.
       Clicking the button locks/pins the view.
     - Checkbox: Isolate 2026 poll races only (mutes safe seats and focuses pie chart on 35 contested races).
+    - Subtle distinct dashed border on contested seats when poll predictions are active.
     """
     comp_z = df["code_composition"].tolist()
     polls_z = df["code_combined"].tolist()
     isolated_z = df["code_polls_only"].tolist()
     tooltips = df["tooltip"].tolist()
     locs = df["feature_id"].tolist()
+    contested_locs = df[df["is_contested_2026"]]["feature_id"].tolist()
     state_names = [f["id"] for f in outlines_geojson["features"]]
 
     colorscale_items = []
@@ -346,6 +350,8 @@ def build_interactive_dashboard_html(
     const tooltips = {json.dumps(tooltips)};
     const stateNames = {json.dumps(state_names)};
     const colorscale = {json.dumps(colorscale_items)};
+    const contestedLocs = {json.dumps(contested_locs)};
+    const contestedSet = new Set(contestedLocs);
 
     // Map traces definition
     const mapTraceHalves = {{
@@ -502,6 +508,74 @@ def build_interactive_dashboard_html(
     let isButtonHovered = false;
     let isPinned = false;
 
+    // Dedicated top-level overlay layer for contested seats' dashed borders (visible over both black and white borders)
+    function updateContestedOverlay(showPolls) {{
+      const choroplethGroup = document.querySelector('#map-container .choropleth') || 
+                              document.querySelector('#map-container .geolayer');
+      if (!choroplethGroup) return;
+
+      let overlayGroup = document.getElementById('contested-stroke-overlay');
+      if (!overlayGroup) {{
+        overlayGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        overlayGroup.setAttribute('id', 'contested-stroke-overlay');
+        overlayGroup.style.pointerEvents = 'none';
+        overlayGroup.style.transition = 'opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
+        choroplethGroup.appendChild(overlayGroup);
+      }}
+
+      // Populate overlay paths if empty
+      if (overlayGroup.children.length === 0) {{
+        const allPaths = document.querySelectorAll('#map-container path.choroplethlocation');
+        const numHalves = Math.min(locs.length, allPaths.length);
+        for (let idx = 0; idx < numHalves; idx++) {{
+          const p = allPaths[idx];
+          const d = p.__data__;
+          let loc = null;
+          if (d) {{
+            loc = d.id || (d.properties && d.properties.id) || (d.properties && (d.properties.state + '_' + d.properties.side));
+          }}
+          if (!loc) {{
+            loc = locs[idx];
+          }}
+          if (contestedSet.has(loc)) {{
+            const overlayPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            overlayPath.setAttribute('d', p.getAttribute('d'));
+            overlayPath.setAttribute('class', 'contested-seat-border');
+            overlayPath.style.fill = 'none';
+            overlayPath.style.stroke = '#FFFFFF';
+            overlayPath.style.strokeWidth = '2.6px';
+            overlayPath.style.strokeDasharray = '5, 3.5';
+            overlayPath.style.strokeLinecap = 'round';
+            overlayPath.style.filter = 'drop-shadow(0 0 1.2px #000000) drop-shadow(0 0 2px rgba(255, 255, 255, 0.5))';
+            overlayPath.style.pointerEvents = 'none';
+            overlayGroup.appendChild(overlayPath);
+          }}
+        }}
+      }} else {{
+        // Synchronize path geometry on update or resize
+        const allPaths = document.querySelectorAll('#map-container path.choroplethlocation');
+        let overlayIdx = 0;
+        const numHalves = Math.min(locs.length, allPaths.length);
+        for (let idx = 0; idx < numHalves; idx++) {{
+          const p = allPaths[idx];
+          const d = p.__data__;
+          let loc = null;
+          if (d) {{
+            loc = d.id || (d.properties && d.properties.id) || (d.properties && (d.properties.state + '_' + d.properties.side));
+          }}
+          if (!loc) {{
+            loc = locs[idx];
+          }}
+          if (contestedSet.has(loc) && overlayIdx < overlayGroup.children.length) {{
+            overlayGroup.children[overlayIdx].setAttribute('d', p.getAttribute('d'));
+            overlayIdx++;
+          }}
+        }}
+      }}
+
+      overlayGroup.style.opacity = showPolls ? '1' : '0';
+    }}
+
     function updateDashboard() {{
       const isIsolated = isolateChk.checked;
       const showPolls = isButtonHovered || isPinned || isIsolated;
@@ -535,7 +609,11 @@ def build_interactive_dashboard_html(
       }}
 
       // Restyle Map: CSS handles smooth dynamic gradient transition on polygon fills
-      Plotly.restyle('map-container', {{ z: [targetZ] }}, [0]);
+      Plotly.restyle('map-container', {{ z: [targetZ] }}, [0]).then(() => {{
+        updateContestedOverlay(showPolls);
+      }});
+      // Apply immediately for instantaneous visual feedback
+      updateContestedOverlay(showPolls);
 
       // Select Pie Chart dataset
       let targetPie;
@@ -571,6 +649,9 @@ def build_interactive_dashboard_html(
     isolateChk.addEventListener('change', () => {{
       updateDashboard();
     }});
+
+    // Initialize stroke hierarchy on first load
+    setTimeout(() => updateContestedOverlay(false), 250);
   </script>
 </body>
 </html>
