@@ -1,12 +1,15 @@
 """
 Map and chart construction module for the 2026 US Senate interactive visualization.
 
-Renders:
+Features:
 1. Map: 100 split half-state polygons with white internal dividers and black state perimeters.
    No text abbreviation clutter and zero white background/lake artifacts.
-2. Pie Chart: 100-seat pie chart without center text or legend clutter, displaying slice numbers.
-   Sectors are consistently anchored across views (Republicans on right, Democrats on left).
-3. Interactive client-side dashboard with dynamic color gradient transitions on hover.
+2. Pie Chart: 100-seat (or 35-seat isolated) pie chart without center text or legend clutter.
+   Displays slice numbers and locks party sectors consistently (REP on right, DEM on left).
+3. Interactive client-side dashboard with:
+   - Single hover button (enter for 2026 Polls, leave for Current Senate).
+   - Checkbox to isolate 2026 poll results (mutes safe seats).
+   - Dynamic 60fps color gradient transitions via hardware-accelerated CSS.
 """
 
 import json
@@ -121,7 +124,7 @@ def build_figure(
 
 def build_pie_figure(df: pd.DataFrame, view: str = "combined") -> go.Figure:
     """
-    Build the matching pie chart for the 100 Senate seats based on active view.
+    Build the matching pie chart for the Senate seats based on active view.
     Zero center text, no legend, sectors anchored consistently (REP on right, DEM on left).
     """
     if view == "composition":
@@ -129,6 +132,17 @@ def build_pie_figure(df: pd.DataFrame, view: str = "combined") -> go.Figure:
         values = [53, 2, 45]
         colors = ["#DC2626", "#EAB308", "#2563EB"]
         text_colors = ["#FFFFFF", "#0F172A", "#FFFFFF"]
+    elif view == "polls_only":
+        labels = [
+            "Solid Republican (> 2 pp)",
+            "Toss-Up (Lean REP ≤ 2 pp)",
+            "No Poll Data",
+            "Toss-Up (Lean DEM ≤ 2 pp)",
+            "Solid Democrat (> 2 pp)",
+        ]
+        values = [12, 3, 5, 3, 12]
+        colors = ["#DC2626", "#FCA5A5", "#64748B", "#93C5FD", "#2563EB"]
+        text_colors = ["#FFFFFF", "#0F172A", "#FFFFFF", "#0F172A", "#FFFFFF"]
     else:
         labels = [
             "Solid Republican (> 2 pp)",
@@ -180,13 +194,14 @@ def build_interactive_dashboard_html(
 ) -> str:
     """
     Generate an interactive client-side dashboard with the Map and Pie Chart side-by-side.
-    Both the Map and Pie Chart dynamically adapt between views with hardware-accelerated transitions:
-    - View 1: Current Senate Composition (53 REP, 45 DEM, 2 IND)
-    - View 2: 2026 Poll Predictions (43 REP + 3 Lean REP | 2 IND | 5 No Data | 3 Lean DEM + 44 DEM)
-    Party sectors remain strictly locked in the same position (Republicans on right, Democrats on left).
+    Controls:
+    - Single hover button: Hover over it to view 2026 Poll Predictions, move away to return to Current Senate.
+      Clicking the button locks/pins the view.
+    - Checkbox: Isolate 2026 poll races only (mutes safe seats and focuses pie chart on 35 contested races).
     """
     comp_z = df["code_composition"].tolist()
     polls_z = df["code_combined"].tolist()
+    isolated_z = df["code_polls_only"].tolist()
     tooltips = df["tooltip"].tolist()
     locs = df["feature_id"].tolist()
     state_names = [f["id"] for f in outlines_geojson["features"]]
@@ -213,43 +228,65 @@ def build_interactive_dashboard_html(
       color: #F8FAFC;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }}
-    .dashboard-header {{
+    .controls-bar {{
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 14px;
+      gap: 20px;
       margin-bottom: 12px;
+      flex-wrap: wrap;
     }}
-    .hover-pill {{
-      display: flex;
+    .hover-btn {{
+      display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 18px;
+      gap: 10px;
+      padding: 9px 22px;
       border-radius: 9999px;
       background: #1E293B;
       border: 1.5px solid #334155;
-      color: #94A3B8;
-      font-size: 0.88rem;
+      color: #F8FAFC;
+      font-size: 0.90rem;
+      font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       user-select: none;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
     }}
-    .hover-pill:hover, .hover-pill.active {{
+    .hover-btn:hover, .hover-btn.active {{
       background: #0F172A;
       border-color: #38BDF8;
-      color: #F8FAFC;
-      box-shadow: 0 0 14px rgba(56, 189, 248, 0.3);
+      color: #38BDF8;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+      transform: translateY(-1px);
     }}
-    .pill-dot {{
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      display: inline-block;
+    .hover-btn.pinned {{
+      border-color: #F59E0B;
+      color: #F59E0B;
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.35);
     }}
-    .hover-divider {{
-      font-size: 0.8rem;
-      color: #64748B;
-      letter-spacing: 0.05em;
+    .checkbox-container {{
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 0.88rem;
+      color: #CBD5E1;
+      background: #1E293B;
+      padding: 8px 18px;
+      border-radius: 9999px;
+      border: 1.5px solid #334155;
+      transition: all 0.25s ease;
+    }}
+    .checkbox-container:hover {{
+      border-color: #64748B;
+      color: #FFFFFF;
+    }}
+    .checkbox-container input {{
+      cursor: pointer;
+      accent-color: #38BDF8;
+      width: 16px;
+      height: 16px;
     }}
     .dashboard-grid {{
       display: grid;
@@ -280,16 +317,18 @@ def build_interactive_dashboard_html(
   </style>
 </head>
 <body>
-  <div class="dashboard-header">
-    <div id="pill-comp" class="hover-pill active" title="Hover to view Current Senate Composition">
-      <span class="pill-dot" style="background: #DC2626;"></span>
-      <b>🏛️ Current Senate Composition</b> (53 REP · 45 DEM · 2 IND)
-    </div>
-    <span class="hover-divider">⟵ Hover to transition with dynamic gradient ⟶</span>
-    <div id="pill-polls" class="hover-pill" title="Hover to view 2026 Poll Predictions">
-      <span class="pill-dot" style="background: #2563EB;"></span>
-      <b>📊 2026 Poll Predictions</b> (44 DEM · 43 REP · 6 Toss-Up)
-    </div>
+  <div class="controls-bar">
+    <!-- Single hover button -->
+    <button id="hover-toggle-btn" class="hover-btn" title="Hover over this button to preview 2026 Polls. Move away to return to Current Senate. Click to lock.">
+      <span id="btn-icon">⚡</span>
+      <span id="btn-text">Hover for 2026 Poll Predictions</span>
+    </button>
+
+    <!-- Checkbox to isolate 2026 poll results -->
+    <label class="checkbox-container">
+      <input type="checkbox" id="isolate-chk">
+      <span><b>Isolate 2026 Poll Races</b> (Mute safe seats)</span>
+    </label>
   </div>
 
   <div class="dashboard-grid">
@@ -303,6 +342,7 @@ def build_interactive_dashboard_html(
     const locs = {json.dumps(locs)};
     const compZ = {json.dumps(comp_z)};
     const pollsZ = {json.dumps(polls_z)};
+    const isolatedZ = {json.dumps(isolated_z)};
     const tooltips = {json.dumps(tooltips)};
     const stateNames = {json.dumps(state_names)};
     const colorscale = {json.dumps(colorscale_items)};
@@ -364,7 +404,7 @@ def build_interactive_dashboard_html(
 
     Plotly.newPlot('map-container', [mapTraceHalves, mapTraceOutlines], mapLayout, {{ responsive: true, displayModeBar: false }});
 
-    // Pie chart dataset 1: Current Senate Composition (Anchored: REP on right, IND in middle, DEM on left)
+    // Pie chart dataset 1: Current Senate Composition (100 seats: REP on right, IND in middle, DEM on left)
     const pieCompData = {{
       type: 'pie',
       labels: ['Republicans', 'Independents', 'Democrats'],
@@ -386,7 +426,7 @@ def build_interactive_dashboard_html(
       hovertemplate: '<b>%{{label}}</b><br>Seats: %{{value}} (%{{percent}})<extra></extra>'
     }};
 
-    // Pie chart dataset 2: 2026 Poll Predictions (Identical spatial anchoring: REP -> IND -> NO_DATA -> DEM)
+    // Pie chart dataset 2: 2026 Poll Predictions (100 seats: identically anchored REP -> IND -> NO_DATA -> DEM)
     const piePollsData = {{
       type: 'pie',
       labels: [
@@ -415,6 +455,34 @@ def build_interactive_dashboard_html(
       hovertemplate: '<b>%{{label}}</b><br>Seats: %{{value}} (%{{percent}})<extra></extra>'
     }};
 
+    // Pie chart dataset 3: Isolated 2026 Poll Races (35 contested seats in election)
+    const pieIsolatedData = {{
+      type: 'pie',
+      labels: [
+        'Solid Republican (> 2 pp)',
+        'Toss-Up (Lean REP ≤ 2 pp)',
+        'No Poll Data',
+        'Toss-Up (Lean DEM ≤ 2 pp)',
+        'Solid Democrat (> 2 pp)'
+      ],
+      values: [12, 3, 5, 3, 12],
+      hole: 0,
+      rotation: 0,
+      direction: 'clockwise',
+      sort: false,
+      marker: {{
+        colors: ['#DC2626', '#FCA5A5', '#64748B', '#93C5FD', '#2563EB'],
+        line: {{ color: '#0F172A', width: 1.5 }}
+      }},
+      textinfo: 'value',
+      textposition: 'auto',
+      textfont: {{
+        size: 14,
+        color: ['#FFFFFF', '#0F172A', '#FFFFFF', '#0F172A', '#FFFFFF']
+      }},
+      hovertemplate: '<b>%{{label}}</b><br>Contested Seats: %{{value}} (%{{percent}})<extra></extra>'
+    }};
+
     const pieLayout = {{
       margin: {{ l: 15, r: 15, t: 25, b: 25 }},
       paper_bgcolor: 'rgba(0,0,0,0)',
@@ -426,45 +494,82 @@ def build_interactive_dashboard_html(
     // Initial render of Pie Chart (clean full pie with numbers, zero center text, zero legend)
     Plotly.newPlot('pie-container', [pieCompData], pieLayout, {{ responsive: true, displayModeBar: false }});
 
-    // Dynamic Hover Transition Logic
-    let currentView = 'composition';
+    // Control Elements
+    const hoverBtn = document.getElementById('hover-toggle-btn');
+    const btnText = document.getElementById('btn-text');
+    const isolateChk = document.getElementById('isolate-chk');
+
+    let isButtonHovered = false;
     let isPinned = false;
 
-    function setView(view, pinned = false) {{
-      if (isPinned && !pinned) return;
-      if (pinned) isPinned = true;
-      if (view === currentView) return;
-      currentView = view;
+    function updateDashboard() {{
+      const isIsolated = isolateChk.checked;
+      const showPolls = isButtonHovered || isPinned || isIsolated;
 
-      document.getElementById('pill-comp').classList.toggle('active', view === 'composition');
-      document.getElementById('pill-polls').classList.toggle('active', view === 'polls');
+      // Update button text and visual classes
+      if (isPinned) {{
+        hoverBtn.classList.add('pinned', 'active');
+        btnText.textContent = '🔒 Locked on 2026 Polls (Click to unlock)';
+      }} else if (isButtonHovered) {{
+        hoverBtn.classList.add('active');
+        hoverBtn.classList.remove('pinned');
+        btnText.textContent = isIsolated
+          ? '📊 Viewing 2026 Polls (Isolated)'
+          : '📊 Viewing 2026 Polls (Move away for Current Senate)';
+      }} else if (isIsolated) {{
+        hoverBtn.classList.remove('pinned', 'active');
+        btnText.textContent = '⚡ 2026 Races Isolated (35 Seats)';
+      }} else {{
+        hoverBtn.classList.remove('pinned', 'active');
+        btnText.textContent = '⚡ Hover for 2026 Poll Predictions';
+      }}
 
-      // Update Map: CSS transition on path.choroplethlocation smoothly animates fill gradient
-      const targetZ = view === 'composition' ? compZ : pollsZ;
+      // Select Map Z dataset
+      let targetZ;
+      if (isIsolated) {{
+        targetZ = isolatedZ; // 35 contested seats colored by polls, 65 safe seats muted
+      }} else if (showPolls) {{
+        targetZ = pollsZ;    // 100 seats: safe seats with party, contested with polls
+      }} else {{
+        targetZ = compZ;     // 100 seats: incumbent party composition
+      }}
+
+      // Restyle Map: CSS handles smooth dynamic gradient transition on polygon fills
       Plotly.restyle('map-container', {{ z: [targetZ] }}, [0]);
 
-      // Update Pie Chart dynamically using Plotly.react
-      const targetPie = view === 'composition' ? pieCompData : piePollsData;
+      // Select Pie Chart dataset
+      let targetPie;
+      if (isIsolated) {{
+        targetPie = pieIsolatedData;
+      }} else if (showPolls) {{
+        targetPie = piePollsData;
+      }} else {{
+        targetPie = pieCompData;
+      }}
+
+      // Update Pie Chart reactively
       Plotly.react('pie-container', [targetPie], pieLayout);
     }}
 
-    // Pill Hover Listeners
-    const pillComp = document.getElementById('pill-comp');
-    const pillPolls = document.getElementById('pill-polls');
-
-    pillComp.addEventListener('mouseenter', () => setView('composition'));
-    pillPolls.addEventListener('mouseenter', () => setView('polls'));
-
-    pillComp.addEventListener('click', () => {{ isPinned = true; setView('composition', true); }});
-    pillPolls.addEventListener('click', () => {{ isPinned = true; setView('polls', true); }});
-
-    // Map Hover Listeners: Hovering over map transitions to polls view, leaving returns to composition
-    const mapDiv = document.getElementById('map-container');
-    mapDiv.addEventListener('mouseenter', () => {{
-      if (!isPinned) setView('polls');
+    // Single Button Hover Listeners
+    hoverBtn.addEventListener('mouseenter', () => {{
+      isButtonHovered = true;
+      updateDashboard();
     }});
-    mapDiv.addEventListener('mouseleave', () => {{
-      if (!isPinned) setView('composition');
+
+    hoverBtn.addEventListener('mouseleave', () => {{
+      isButtonHovered = false;
+      updateDashboard();
+    }});
+
+    hoverBtn.addEventListener('click', () => {{
+      isPinned = !isPinned;
+      updateDashboard();
+    }});
+
+    // Checkbox Change Listener
+    isolateChk.addEventListener('change', () => {{
+      updateDashboard();
     }});
   </script>
 </body>

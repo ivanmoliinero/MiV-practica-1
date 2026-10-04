@@ -6,8 +6,10 @@ Each US state is geographically divided into two halves representing its two US 
 - Internal division: Crisp white line divides each state into two senator seats.
 - Left / West half: Safe seat not up for election in 2026 (or Senator 1).
 - Right / East half: Seat up for election in 2026 (or Senator 2).
-- Dynamic transition on hover between Current Senate and 2026 Poll Predictions.
-- Accompanied by a synchronous 100-seat Pie Chart.
+- Controls:
+  - Single hover button to preview 2026 Poll Predictions with a dynamic gradient transition (move away to return).
+  - Checkbox to isolate the 35 contested races in play (muting general safe seats).
+- Accompanied by a synchronized Pie Chart with consistently anchored party sectors.
 """
 
 import streamlit as st
@@ -62,8 +64,8 @@ def main() -> None:
     st.title("🗳️ US Senate 2026 — Interactive Geographic Representation & Balance")
     st.caption(
         "Each state is bounded by a black border and divided internally by a white line into two halves "
-        "representing its two US Senators. Hover over the tabs or the map to transition between "
-        "Current Senate Composition and 2026 Poll Predictions with a dynamic color gradient."
+        "representing its two US Senators. Hover over the button above the map to transition between "
+        "Current Senate and 2026 Poll Predictions with a dynamic gradient. Use the checkbox to isolate the 35 races in play."
     )
 
     # Load data and GeoJSON collections
@@ -89,6 +91,7 @@ def main() -> None:
                 <div><span class="color-badge" style="background-color: #FCA5A5;"></span> <b>Light Red:</b> Toss-Up Race — Slight Republican Lead (≤ 2 pp)</div>
                 <div><span class="color-badge" style="background-color: #EAB308;"></span> <b>Golden Yellow:</b> Independent Senator</div>
                 <div><span class="color-badge" style="background-color: #64748B;"></span> <b>Slate Gray:</b> Contested seat with no poll data yet</div>
+                <div><span class="color-badge" style="background-color: #1E293B;"></span> <b>Dark Slate:</b> Safe seat unpainted (in isolated view)</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -103,7 +106,7 @@ def main() -> None:
                 • <b>Inner White Line:</b> Divides each state into its two Senate seats.<br>
                 • <b>Left (West) Half:</b> Safe senator not up for election in 2026.<br>
                 • <b>Right (East) Half:</b> Contested seat up for election in 2026.<br>
-                • <b>Interactivity:</b> Hover over the top pills or the map to morph between Current Senate (53-45-2) and 2026 Polls (44 DEM, 43 REP, 6 Toss-Up). Click to pin.
+                • <b>Interactivity:</b> Hover over the button to view 2026 Polls (move cursor away to return to Current Senate). Check the box to isolate only the 35 contested races.
             </div>
             """,
             unsafe_allow_html=True,

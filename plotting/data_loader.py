@@ -38,7 +38,7 @@ COLOR_PALETTE: Dict[str, str] = {
     "TIE": "#C084FC",         # Soft Violet for exact ties
     "IND": "#EAB308",         # Golden Yellow for Independents
     "NO_DATA": "#64748B",     # Slate Gray
-    "SAFE_MUTED": "#E2E8F0",  # Light Muted Gray
+    "SAFE_MUTED": "#1E293B",  # Dark slate neutral (unpainted safe seats in isolated view)
 }
 
 CATEGORY_TO_INT: Dict[str, int] = {cat: i for i, cat in enumerate(COLOR_CATEGORIES)}
