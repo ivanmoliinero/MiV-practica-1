@@ -13,7 +13,6 @@ A static, publication-grade data visualization communicating the 2026 US Senate 
   - Circular transfer badges (`⇄`) marking battleground seats projected to flip party control.
   - 50-Seat Majority Threshold Bar (0 to 100 seats) and 7-seat battleground flip ledger.
 - **`state_centroids.py`**: Geographical configuration containing:
-  - `STATE_CENTROIDS`: Geographical center for state labels.
   - `STATE_LOWER_RIGHT_COORDS`: Strict south-east polygon coordinates for postal abbreviations.
   - `SEAT_SYMBOL_COORDS`: Dedicated `(lat, lon)` coordinates for all 100 individual Senate seats (`<State>_left` and `<State>_right`), mathematically verified to fall strictly within half-state polygons.
   - `get_seat_symbol_coord`: Dynamic coordinate resolver for any state name, abbreviation, or feature ID.

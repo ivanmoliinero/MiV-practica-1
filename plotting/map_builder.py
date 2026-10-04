@@ -26,7 +26,6 @@ from data_loader import (
     get_flip_records,
 )
 from state_centroids import (
-    FLIP_BADGE_COORDS,
     SEAT_SYMBOL_COORDS,
     STATE_LOWER_RIGHT_COORDS,
     STATE_TO_ABBREV,

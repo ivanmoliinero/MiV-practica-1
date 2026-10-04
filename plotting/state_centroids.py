@@ -1,8 +1,11 @@
 """
-Geographical centroids and abbreviations for all 50 US states.
+Geographical coordinates and state mappings for the 2026 US Senate map visualization.
 
-Coordinates are standard latitude and longitude tuples (lat, lon) used for
-positioning Plotly Scattergeo markers over US map projections.
+Contains:
+- STATE_TO_ABBREV and ABBREV_TO_STATE mappings.
+- STATE_LOWER_RIGHT_COORDS: Strict south-east coordinates for state postal abbreviations.
+- SEAT_SYMBOL_COORDS: Verified coordinates for all 100 Senate seats (left/right halves).
+- get_seat_symbol_coord: Dynamic coordinate resolver function.
 """
 
 from typing import Dict, Optional, Tuple
@@ -62,114 +65,6 @@ STATE_TO_ABBREV: Dict[str, str] = {
 
 ABBREV_TO_STATE: Dict[str, str] = {v: k for k, v in STATE_TO_ABBREV.items()}
 
-# State centroid geographic coordinates (latitude, longitude)
-STATE_CENTROIDS: Dict[str, Tuple[float, float]] = {
-    "AL": (32.806671, -86.791130),
-    "AK": (64.200841, -149.493673),
-    "AZ": (34.048928, -111.093731),
-    "AR": (34.799999, -92.199997),
-    "CA": (36.778261, -119.417932),
-    "CO": (39.550051, -105.782067),
-    "CT": (41.603221, -72.787749),
-    "DE": (38.910832, -75.527670),
-    "FL": (28.164827, -81.515754),
-    "GA": (32.165622, -82.900075),
-    "HI": (20.796766, -156.332782),
-    "ID": (44.068202, -114.742041),
-    "IL": (40.033125, -89.398528),
-    "IN": (39.867194, -86.234902),
-    "IA": (42.008003, -93.297702),
-    "KS": (38.511902, -96.884246),
-    "KY": (37.639333, -84.670018),
-    "LA": (31.184298, -91.962333),
-    "ME": (45.253783, -69.445469),
-    "MD": (39.045755, -76.641271),
-    "MA": (42.207211, -71.882437),
-    "MI": (44.314844, -84.602364),
-    "MN": (46.229553, -94.685900),
-    "MS": (32.754668, -89.698528),
-    "MO": (38.564253, -92.331833),
-    "MT": (46.879682, -110.362566),
-    "NE": (41.492537, -99.901813),
-    "NV": (38.802610, -116.419389),
-    "NH": (43.493852, -71.572395),
-    "NJ": (40.058324, -74.405661),
-    "NM": (34.519940, -105.870090),
-    "NY": (42.899428, -75.517933),
-    "NC": (35.559573, -79.519300),
-    "ND": (47.551493, -100.502012),
-    "OH": (40.217287, -82.907123),
-    "OK": (35.507752, -97.092877),
-    "OR": (43.804133, -120.554201),
-    "PA": (40.803322, -77.694525),
-    "RI": (41.680095, -71.577429),
-    "SC": (33.836081, -80.963725),
-    "SD": (44.269515, -100.201813),
-    "TN": (35.717491, -86.380447),
-    "TX": (31.468599, -99.301813),
-    "UT": (39.320980, -111.693731),
-    "VT": (44.058803, -72.577841),
-    "VA": (37.531573, -78.656894),
-    "WA": (47.351074, -120.740139),
-    "WV": (38.597626, -80.454903),
-    "WI": (44.584440, -89.787868),
-    "WY": (43.075968, -107.290284),
-}
-
-# State upper-right coordinates (latitude, longitude) strictly positioned inside each state polygon
-STATE_UPPER_RIGHT_COORDS: Dict[str, Tuple[float, float]] = {
-    "AL": (33.492, -86.084),
-    "AK": (65.467, -148.731),
-    "AZ": (35.443, -110.631),
-    "AR": (35.521, -91.228),
-    "CA": (37.660, -118.947),
-    "CO": (39.400, -103.977),
-    "CT": (41.736, -72.329),
-    "DE": (39.232, -75.441),
-    "FL": (29.300, -82.072),
-    "GA": (33.725, -82.871),
-    "HI": (20.808, -156.300),
-    "ID": (45.394, -114.111),
-    "IL": (40.591, -88.614),
-    "IN": (41.097, -85.699),
-    "IA": (42.694, -92.300),
-    "KS": (39.183, -96.711),
-    "KY": (38.375, -84.115),
-    "LA": (31.918, -91.498),
-    "ME": (46.505, -68.510),
-    "MD": (39.210, -76.946),
-    "MA": (42.488, -71.403),
-    "MI": (46.300, -85.469),
-    "MN": (47.497, -92.379),
-    "MS": (33.072, -89.187),
-    "MO": (39.364, -91.838),
-    "MT": (47.164, -107.345),
-    "NE": (42.264, -98.236),
-    "NV": (40.073, -115.683),
-    "NH": (44.621, -71.294),
-    "NJ": (40.853, -74.389),
-    "NM": (35.259, -104.685),
-    "NY": (43.786, -74.793),
-    "NC": (35.798, -78.095),
-    "ND": (48.343, -98.912),
-    "OH": (41.009, -81.701),
-    "OK": (35.949, -96.834),
-    "OR": (44.977, -118.876),
-    "PA": (41.434, -76.358),
-    "RI": (41.899, -71.441),
-    "SC": (34.328, -80.144),
-    "SD": (44.671, -98.539),
-    "TN": (36.231, -84.193),
-    "TX": (33.572, -97.576),
-    "UT": (40.124, -110.423),
-    "VT": (44.369, -72.215),
-    "VA": (38.698, -78.090),
-    "WA": (48.381, -119.120),
-    "WV": (39.254, -78.890),
-    "WI": (45.588, -89.019),
-    "WY": (44.000, -105.979),
-}
-
 # State lower-right coordinates (latitude, longitude) strictly positioned in the SE area inside each state polygon
 STATE_LOWER_RIGHT_COORDS: Dict[str, Tuple[float, float]] = {
     "AL": (31.6, -85.6),
@@ -193,7 +88,7 @@ STATE_LOWER_RIGHT_COORDS: Dict[str, Tuple[float, float]] = {
     "ME": (44.8, -68.5),
     "MD": (38.5, -76.0),
     "MA": (41.9, -70.9),
-    "MI": (43.0, -83.5),
+    "MI": (42.5, -83.5),
     "MN": (44.5, -92.8),
     "MS": (31.2, -89.3),
     "MO": (37.0, -90.5),
@@ -271,7 +166,7 @@ SEAT_SYMBOL_COORDS: Dict[str, Tuple[float, float]] = {
     "Massachusetts_left": (42.372, -72.562),
     "Massachusetts_right": (42.679, -71.366),
     "Michigan_left": (46.257, -88.118),
-    "Michigan_right": (43.8, -84.0),
+    "Michigan_right": (43.3, -84.8),
     "Minnesota_left": (46.324, -95.114),
     "Minnesota_right": (46.302, -92.442),
     "Mississippi_left": (32.719, -90.511),
@@ -367,17 +262,10 @@ def get_seat_symbol_coord(
     if key_right in SEAT_SYMBOL_COORDS:
         return SEAT_SYMBOL_COORDS[key_right]
 
-    # Fallback to state centroid if no exact half-seat match is found
+    # Fallback to state lower-right coordinate if no exact half-seat match is found
     abbrev = STATE_TO_ABBREV.get(identifier, identifier)
-    if abbrev in STATE_CENTROIDS:
-        return STATE_CENTROIDS[abbrev]
+    if abbrev in STATE_LOWER_RIGHT_COORDS:
+        return STATE_LOWER_RIGHT_COORDS[abbrev]
 
     raise KeyError(f"Seat coordinate not found for identifier: '{identifier}', side: '{side}'")
-
-
-# Backward-compatible mapping for flip transfer badges across all 50 states (defaults to right seat)
-FLIP_BADGE_COORDS: Dict[str, Tuple[float, float]] = {
-    abbrev: SEAT_SYMBOL_COORDS[f"{state}_right"]
-    for state, abbrev in STATE_TO_ABBREV.items()
-}
 
