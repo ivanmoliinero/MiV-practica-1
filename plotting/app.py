@@ -35,29 +35,35 @@ def set_custom_styles() -> None:
         header[data-testid="stHeader"], .stAppHeader {
             display: none !important;
         }
-        /* Tighten internal Streamlit vertical block gaps */
+        /* Standardize internal Streamlit vertical block spacing */
         div[data-testid="stVerticalBlock"] {
-            gap: 0.25rem !important;
+            gap: 0.35rem !important;
         }
         /* Expand Streamlit block-container to full width with crisp padding */
         .block-container {
             max-width: 100% !important;
             width: 100% !important;
-            padding: 0.4rem 1.2rem 0.2rem 1.2rem !important;
+            padding: 0.5rem 1.2rem 0.2rem 1.2rem !important;
             box-sizing: border-box !important;
         }
-        /* Title and caption */
+        /* Title and caption with clean visual hierarchy and breathing room */
         h1 {
-            margin: 0 !important;
+            margin: 0 0 0.25rem 0 !important;
             padding: 0 !important;
-            font-size: 1.50rem !important;
-            line-height: 1.15 !important;
+            font-size: 1.55rem !important;
+            line-height: 1.25 !important;
             color: #F8FAFC !important;
+            letter-spacing: -0.01em !important;
         }
         [data-testid="stCaptionContainer"] {
+            margin: 0 0 0.45rem 0 !important;
+            padding: 0 !important;
+        }
+        [data-testid="stCaptionContainer"] p {
             margin: 0 !important;
             padding: 0 !important;
-            font-size: 0.80rem !important;
+            font-size: 0.82rem !important;
+            line-height: 1.35 !important;
             color: #94A3B8 !important;
         }
         /* Make Streamlit component iframe dynamically responsive without triggering root page scroll */
@@ -66,7 +72,7 @@ def set_custom_styles() -> None:
         iframe[title="streamlit.components.v1.html"],
         iframe {
             width: 100% !important;
-            height: calc(100vh - 100px) !important;
+            height: calc(100vh - 105px) !important;
             min-height: 520px !important;
             border: none !important;
             display: block !important;
@@ -77,7 +83,7 @@ def set_custom_styles() -> None:
             div[data-testid="stCustomComponentV1"] > iframe,
             iframe[title="streamlit.components.v1.html"],
             iframe {
-                height: calc(100vh - 110px) !important;
+                height: calc(100vh - 115px) !important;
                 min-height: 750px !important;
             }
         }

@@ -414,15 +414,19 @@ def build_interactive_dashboard_html(
       height: 100%;
       min-height: 220px;
       position: relative;
+      overflow: hidden !important;
     }}
     #map-legend-bar {{
+      position: relative !important;
+      z-index: 20 !important;
       flex-shrink: 0;
-      background: #0B1120;
+      background: #0B1120 !important;
       border-top: 1px solid #1E293B;
-      padding: 5px 12px;
+      padding: 6px 14px;
       display: flex;
       flex-direction: column;
       gap: 3px;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.4);
     }}
     .legend-row {{
       display: flex;
@@ -688,16 +692,13 @@ def build_interactive_dashboard_html(
       filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.75)) !important;
     }}
 
-    /* Eliminate artificial SVG clipping rects so the map expands across full screen dimensions seamlessly */
+    /* Eliminate artificial SVG clipping rects while strictly containing map inside map-plot */
     #map-plot .plot-container,
-    #map-plot .svg-container {{
-      width: 100% !important;
-      height: 100% !important;
-    }}
+    #map-plot .svg-container,
     #map-plot svg.main-svg {{
       width: 100% !important;
       height: 100% !important;
-      overflow: visible !important;
+      overflow: hidden !important;
     }}
     #map-plot .geolayer,
     #map-plot .geosubplot,
