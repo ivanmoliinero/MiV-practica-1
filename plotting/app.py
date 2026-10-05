@@ -66,30 +66,6 @@ def set_custom_styles() -> None:
             line-height: 1.35 !important;
             color: #94A3B8 !important;
         }
-        /* Style Streamlit filter checkbox in header */
-        div[data-testid="stCheckbox"] {
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-        div[data-testid="stCheckbox"] label {
-            background: #1E293B;
-            border: 1px solid #334155;
-            padding: 5px 12px;
-            border-radius: 6px;
-            font-size: 0.80rem !important;
-            font-weight: 600;
-            color: #E2E8F0 !important;
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-            transition: all 0.2s ease;
-        }
-        div[data-testid="stCheckbox"] label:hover {
-            border-color: #38BDF8;
-            background: #0F172A;
-        }
         /* Make Streamlit component iframe dynamically responsive without triggering root page scroll */
         div[data-testid="stCustomComponentV1"],
         div[data-testid="stCustomComponentV1"] > iframe,
@@ -127,19 +103,9 @@ def main() -> None:
 
     set_custom_styles()
 
-    # Header: Title, concise description, and view filter toggle
-    col_header, col_filter = st.columns([0.68, 0.32], vertical_alignment="center")
-    with col_header:
-        st.title("US Senate Elections Polls 2026")
-        st.caption("2026 general election poll predictions and projected chamber balance of power.")
-    with col_filter:
-        only_polls = st.checkbox(
-            "Filter: 2026 Races in Play Only",
-            value=False,
-            help="Isolate the 35 contested Senate seats with 2026 poll predictions, muting the 65 safe seats.",
-        )
-
-    view_mode = "polls_only" if only_polls else "combined"
+    # Header: Title and concise description
+    st.title("US Senate Elections Polls 2026")
+    st.caption("2026 general election poll predictions and projected chamber balance of power.")
 
     # Check for debug mode via query parameter or sidebar control
     query_debug = st.query_params.get("debug", "").lower()
@@ -186,7 +152,7 @@ def main() -> None:
 
     # Render static client-side dashboard with integrated Gestalt map legend
     dashboard_html = build_interactive_dashboard_html(
-        senators_df, split_geojson, outlines_geojson, view=view_mode, debug_mode=debug_mode
+        senators_df, split_geojson, outlines_geojson, debug_mode=debug_mode
     )
     components.html(dashboard_html, height=580, scrolling=False)
 

@@ -333,22 +333,16 @@ def build_interactive_dashboard_html(
       displaying the 100-seat distribution, the 50-seat majority threshold line,
       the tally scoreboard (52 DEM majority vs 48 REP minority), and segment key.
     """
-    if view == "polls_only":
-        z_col = "code_polls_only"
-        cat_col = "cat_polls_only"
-    elif view == "composition":
-        z_col = "code_composition"
-        cat_col = "cat_composition"
-    else:
-        z_col = "code_combined"
-        cat_col = "cat_combined"
+    # Prepare both z datasets for seamless client-side filtering via Plotly.restyle
+    polls_z_combined = df["code_combined"].tolist()
+    polls_z_only = df["code_polls_only"].tolist()
+    polls_z_initial = polls_z_only if view == "polls_only" else polls_z_combined
 
-    polls_z = df[z_col].tolist()
     tooltips = df["tooltip"].tolist()
     locs = df["feature_id"].tolist()
     contested_locs = df[df["is_contested_2026"]]["feature_id"].tolist()
     contested_patterns = {
-        row["feature_id"]: f"hatch-{row[cat_col].lower()}"
+        row["feature_id"]: f"hatch-{row['cat_combined'].lower()}"
         for _, row in df[df["is_contested_2026"]].iterrows()
     }
     state_names = [f["id"] for f in outlines_geojson["features"]]
@@ -374,24 +368,27 @@ def build_interactive_dashboard_html(
         colorscale_items.append([i / k, color])
         colorscale_items.append([(i + 1) / k, color])
 
-    if view == "polls_only":
-        legend_colors_html = """
-          <div class="legend-item"><span class="legend-swatch" style="background:#2563EB;"></span> <span>Dem Lead</span></div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#93C5FD;"></span> <span>Dem Toss-Up (≤2 pp)</span></div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#DC2626;"></span> <span>Rep Lead</span></div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#FCA5A5;"></span> <span>Rep Toss-Up (≤2 pp)</span></div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#64748B;"></span> <span>Unpolled (5 seats)</span></div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#1E293B; border: 1px solid #475569;"></span> <span>Safe / Muted (65 seats)</span></div>
-        """
-    else:
-        legend_colors_html = """
+    legend_colors_combined_html = """
           <div class="legend-item"><span class="legend-swatch" style="background:#2563EB;"></span> <span>Dem Lead / Safe</span></div>
           <div class="legend-item"><span class="legend-swatch" style="background:#93C5FD;"></span> <span>Dem Toss-Up (≤2 pp)</span></div>
           <div class="legend-item"><span class="legend-swatch" style="background:#DC2626;"></span> <span>Rep Lead / Safe</span></div>
           <div class="legend-item"><span class="legend-swatch" style="background:#FCA5A5;"></span> <span>Rep Toss-Up (≤2 pp)</span></div>
           <div class="legend-item"><span class="legend-swatch" style="background:#EAB308;"></span> <span>Independent</span></div>
           <div class="legend-item"><span class="legend-swatch" style="background:#64748B;"></span> <span>Unpolled</span></div>
-        """
+    """
+
+    legend_colors_polls_only_html = """
+          <div class="legend-item"><span class="legend-swatch" style="background:#2563EB;"></span> <span>Dem Lead</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#93C5FD;"></span> <span>Dem Toss-Up (≤2 pp)</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#DC2626;"></span> <span>Rep Lead</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#FCA5A5;"></span> <span>Rep Toss-Up (≤2 pp)</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#64748B;"></span> <span>Unpolled (5 seats)</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#1E293B; border: 1px solid #475569;"></span> <span>Safe / Muted (65 seats)</span></div>
+    """
+
+    legend_colors_initial_html = (
+        legend_colors_polls_only_html if view == "polls_only" else legend_colors_combined_html
+    )
 
     debug_badge_tag = (
         f'<span style="font-size:0.70rem; background:#D97706; color:#FFFFFF; padding:2px 7px; border-radius:4px; margin-left:8px; font-weight:700; vertical-align:middle;">'
@@ -549,6 +546,60 @@ def build_interactive_dashboard_html(
     }}
     .legend-swatch-flip.flip-rep {{
       background-color: #DC2626;
+    }}
+
+    /* Map Legend Interactive Controls */
+    .legend-controls-group {{
+      margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }}
+    .map-control-btn {{
+      background: #1E293B;
+      border: 1px solid #334155;
+      color: #94A3B8;
+      border-radius: 5px;
+      padding: 3px 8px;
+      font-size: 0.70rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+      user-select: none;
+    }}
+    .map-control-btn:hover {{
+      background: #334155;
+      color: #F8FAFC;
+      border-color: #64748B;
+    }}
+    .filter-toggle-control {{
+      background: #1E293B;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 3px 9px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #E2E8F0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+      transition: all 0.2s ease;
+    }}
+    .filter-toggle-control:hover {{
+      border-color: #38BDF8;
+      background: #0F172A;
+    }}
+    .filter-toggle-control input[type="checkbox"] {{
+      cursor: pointer;
+      accent-color: #38BDF8;
+      width: 13px;
+      height: 13px;
+      margin: 0;
     }}
 
     /* Balance of Power Panel */
@@ -847,9 +898,18 @@ def build_interactive_dashboard_html(
             </span>
             <span>Projected Party Flip</span>
           </div>
+          <div class="legend-controls-group">
+            <button id="reset-zoom-btn" class="map-control-btn" title="Reset map zoom and pan back to full USA view">
+              <span style="font-size: 0.85rem;">↺</span> Reset Zoom
+            </button>
+            <label class="filter-toggle-control" title="Toggle between All Seats and 2026 Contested Races Only">
+              <input type="checkbox" id="client-filter-toggle" />
+              <span>Filter: 2026 Races in Play Only</span>
+            </label>
+          </div>
         </div>
-        <div class="legend-row legend-colors">
-          {legend_colors_html}
+        <div class="legend-row legend-colors" id="legend-colors-container">
+          {legend_colors_initial_html}
         </div>
       </div>
     </div>
@@ -909,7 +969,11 @@ def build_interactive_dashboard_html(
     const splitGeojson = {json.dumps(split_geojson)};
     const outlinesGeojson = {json.dumps(outlines_geojson)};
     const locs = {json.dumps(locs)};
-    const pollsZ = {json.dumps(polls_z)};
+    const pollsZCombined = {json.dumps(polls_z_combined)};
+    const pollsZOnly = {json.dumps(polls_z_only)};
+    const legendColorsCombinedHtml = {json.dumps(legend_colors_combined_html)};
+    const legendColorsPollsOnlyHtml = {json.dumps(legend_colors_polls_only_html)};
+
     const tooltips = {json.dumps(tooltips)};
     const stateNames = {json.dumps(state_names)};
     const colorscale = {json.dumps(colorscale_items)};
@@ -924,13 +988,19 @@ def build_interactive_dashboard_html(
     const flipTexts = {json.dumps(flip_texts)};
     const flipTooltips = {json.dumps(flip_tooltips)};
 
+    // Read persistent filter preference from sessionStorage
+    let isFilterActive = false;
+    try {{
+      isFilterActive = sessionStorage.getItem('senate_map_filter_only') === 'true';
+    }} catch (e) {{}}
+
     // Map traces definition
     const mapTraceHalves = {{
       type: 'choropleth',
       geojson: splitGeojson,
       locations: locs,
       featureidkey: 'id',
-      z: pollsZ,
+      z: isFilterActive ? pollsZOnly : pollsZCombined,
       colorscale: colorscale,
       zmin: -0.5,
       zmax: {k} - 0.5,
@@ -999,11 +1069,23 @@ def build_interactive_dashboard_html(
       name: 'Seat Flips'
     }};
 
+    // Retrieve persistent zoom and pan state from sessionStorage
+    let savedGeoState = null;
+    try {{
+      const raw = sessionStorage.getItem('senate_map_geo_state');
+      if (raw) savedGeoState = JSON.parse(raw);
+    }} catch (e) {{}}
+
     const mapLayout = {{
       autosize: true,
+      uirevision: 'senate_map_view',
       geo: {{
         scope: 'usa',
-        projection: {{ type: 'albers usa' }},
+        projection: {{
+          type: 'albers usa',
+          scale: (savedGeoState && typeof savedGeoState.scale === 'number') ? savedGeoState.scale : 1.0
+        }},
+        center: (savedGeoState && savedGeoState.center) ? savedGeoState.center : undefined,
         showsubunits: false,
         showland: false,
         showlakes: false,
@@ -1052,13 +1134,61 @@ def build_interactive_dashboard_html(
       }}
     }}
 
+    // Save active zoom scale and center coordinates to sessionStorage
+    function saveCurrentGeoState(eventData) {{
+      const el = document.getElementById('map-plot');
+      if (!el || !el._fullLayout || !el._fullLayout.geo) return;
+      const g = el._fullLayout.geo;
+      const state = {{}};
+
+      if (g.projection && typeof g.projection.scale === 'number') {{
+        state.scale = g.projection.scale;
+      }}
+      if (g.center && typeof g.center.lon === 'number' && typeof g.center.lat === 'number') {{
+        state.center = {{ lon: g.center.lon, lat: g.center.lat }};
+      }}
+
+      if (eventData) {{
+        if (typeof eventData['geo.projection.scale'] === 'number') {{
+          state.scale = eventData['geo.projection.scale'];
+        }}
+        if (eventData['geo.center']) {{
+          state.center = eventData['geo.center'];
+        }}
+        if (typeof eventData['geo.center.lon'] === 'number' && typeof eventData['geo.center.lat'] === 'number') {{
+          state.center = {{ lon: eventData['geo.center.lon'], lat: eventData['geo.center.lat'] }};
+        }}
+      }}
+
+      if (state.scale !== undefined || state.center !== undefined) {{
+        try {{
+          sessionStorage.setItem('senate_map_geo_state', JSON.stringify(state));
+        }} catch (e) {{}}
+      }}
+    }}
+
     // Initial render with interactive pan and zoom
     Plotly.newPlot('map-plot', [mapTraceHalves, mapTraceOutlines, mapTraceText, mapTraceFlips], mapLayout, {{
       responsive: true,
       displayModeBar: false,
       scrollZoom: true
     }}).then(() => {{
-      applyContestedStyles();
+      if (savedGeoState && (savedGeoState.scale !== 1.0 || savedGeoState.center)) {{
+        const update = {{}};
+        if (typeof savedGeoState.scale === 'number') {{
+          update['geo.projection.scale'] = savedGeoState.scale;
+        }}
+        if (savedGeoState.center) {{
+          update['geo.center'] = savedGeoState.center;
+        }}
+        Plotly.relayout('map-plot', update).then(() => {{
+          applyContestedStyles();
+        }}).catch(() => {{
+          applyContestedStyles();
+        }});
+      }} else {{
+        applyContestedStyles();
+      }}
     }});
 
     // Reliable autosize relayout without fragile mutex locks
@@ -1084,14 +1214,15 @@ def build_interactive_dashboard_html(
 
     window.addEventListener('resize', debouncedResize);
 
-    // Hook Plotly redraw events safely to re-apply pattern classes without mutating the DOM tree
+    // Hook Plotly redraw events safely to re-apply pattern classes and track view changes
     const mapDiv = document.getElementById('map-plot');
     if (mapDiv && mapDiv.on) {{
       mapDiv.on('plotly_afterplot', () => {{
         applyContestedStyles();
       }});
-      mapDiv.on('plotly_relayout', () => {{
+      mapDiv.on('plotly_relayout', (eventData) => {{
         applyContestedStyles();
+        saveCurrentGeoState(eventData);
       }});
     }}
 
@@ -1102,6 +1233,54 @@ def build_interactive_dashboard_html(
     const mapPlot = document.getElementById('map-plot');
     if (mapPlot) {{
       ro.observe(mapPlot);
+    }}
+
+    // Wire in-map client-side filter toggle: instant restyle, zero map regeneration, zoom 100% frozen
+    const filterCheckbox = document.getElementById('client-filter-toggle');
+    const legendColorsContainer = document.getElementById('legend-colors-container');
+
+    if (filterCheckbox) {{
+      if (isFilterActive) {{
+        filterCheckbox.checked = true;
+        if (legendColorsContainer) {{
+          legendColorsContainer.innerHTML = legendColorsPollsOnlyHtml;
+        }}
+      }}
+
+      filterCheckbox.addEventListener('change', (e) => {{
+        const checked = e.target.checked;
+        const targetZ = checked ? pollsZOnly : pollsZCombined;
+
+        // Instant update via Plotly.restyle: 0ms latency, zero map regeneration, zoom 100% frozen
+        Plotly.restyle('map-plot', {{ z: [targetZ] }}, [0]).then(() => {{
+          applyContestedStyles();
+        }});
+
+        if (legendColorsContainer) {{
+          legendColorsContainer.innerHTML = checked ? legendColorsPollsOnlyHtml : legendColorsCombinedHtml;
+        }}
+
+        try {{
+          sessionStorage.setItem('senate_map_filter_only', checked ? 'true' : 'false');
+        }} catch (err) {{}}
+      }});
+    }}
+
+    // Wire reset zoom button
+    const resetZoomBtn = document.getElementById('reset-zoom-btn');
+    if (resetZoomBtn) {{
+      resetZoomBtn.addEventListener('click', () => {{
+        try {{
+          sessionStorage.removeItem('senate_map_geo_state');
+        }} catch (e) {{}}
+
+        Plotly.relayout('map-plot', {{
+          'geo.projection.scale': 1.0,
+          'geo.center': null
+        }}).then(() => {{
+          applyContestedStyles();
+        }});
+      }});
     }}
   </script>
 </body>
