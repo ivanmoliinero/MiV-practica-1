@@ -320,6 +320,7 @@ def build_interactive_dashboard_html(
     df: pd.DataFrame,
     split_geojson: dict,
     outlines_geojson: dict,
+    view: str = "combined",
     debug_mode: str = "none",
 ) -> str:
     """
@@ -332,12 +333,22 @@ def build_interactive_dashboard_html(
       displaying the 100-seat distribution, the 50-seat majority threshold line,
       the tally scoreboard (52 DEM majority vs 48 REP minority), and segment key.
     """
-    polls_z = df["code_combined"].tolist()
+    if view == "polls_only":
+        z_col = "code_polls_only"
+        cat_col = "cat_polls_only"
+    elif view == "composition":
+        z_col = "code_composition"
+        cat_col = "cat_composition"
+    else:
+        z_col = "code_combined"
+        cat_col = "cat_combined"
+
+    polls_z = df[z_col].tolist()
     tooltips = df["tooltip"].tolist()
     locs = df["feature_id"].tolist()
     contested_locs = df[df["is_contested_2026"]]["feature_id"].tolist()
     contested_patterns = {
-        row["feature_id"]: f"hatch-{row['cat_combined'].lower()}"
+        row["feature_id"]: f"hatch-{row[cat_col].lower()}"
         for _, row in df[df["is_contested_2026"]].iterrows()
     }
     state_names = [f["id"] for f in outlines_geojson["features"]]
@@ -362,6 +373,25 @@ def build_interactive_dashboard_html(
         color = COLOR_PALETTE[cat]
         colorscale_items.append([i / k, color])
         colorscale_items.append([(i + 1) / k, color])
+
+    if view == "polls_only":
+        legend_colors_html = """
+          <div class="legend-item"><span class="legend-swatch" style="background:#2563EB;"></span> <span>Dem Lead</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#93C5FD;"></span> <span>Dem Toss-Up (≤2 pp)</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#DC2626;"></span> <span>Rep Lead</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#FCA5A5;"></span> <span>Rep Toss-Up (≤2 pp)</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#64748B;"></span> <span>Unpolled (5 seats)</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#1E293B; border: 1px solid #475569;"></span> <span>Safe / Muted (65 seats)</span></div>
+        """
+    else:
+        legend_colors_html = """
+          <div class="legend-item"><span class="legend-swatch" style="background:#2563EB;"></span> <span>Dem Lead / Safe</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#93C5FD;"></span> <span>Dem Toss-Up (≤2 pp)</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#DC2626;"></span> <span>Rep Lead / Safe</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#FCA5A5;"></span> <span>Rep Toss-Up (≤2 pp)</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#EAB308;"></span> <span>Independent</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#64748B;"></span> <span>Unpolled</span></div>
+        """
 
     debug_badge_tag = (
         f'<span style="font-size:0.70rem; background:#D97706; color:#FFFFFF; padding:2px 7px; border-radius:4px; margin-left:8px; font-weight:700; vertical-align:middle;">'
@@ -819,12 +849,7 @@ def build_interactive_dashboard_html(
           </div>
         </div>
         <div class="legend-row legend-colors">
-          <div class="legend-item"><span class="legend-swatch" style="background:#2563EB;"></span> <span>Dem Lead / Safe</span></div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#93C5FD;"></span> <span>Dem Toss-Up (≤2 pp)</span></div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#DC2626;"></span> <span>Rep Lead / Safe</span></div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#FCA5A5;"></span> <span>Rep Toss-Up (≤2 pp)</span></div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#EAB308;"></span> <span>Independent</span></div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#64748B;"></span> <span>Unpolled</span></div>
+          {legend_colors_html}
         </div>
       </div>
     </div>
