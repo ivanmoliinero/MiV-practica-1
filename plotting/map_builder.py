@@ -386,16 +386,132 @@ def build_interactive_dashboard_html(
       display: grid;
       grid-template-columns: 1.45fr 1fr;
       gap: 18px;
-      height: 675px;
+      height: 700px;
     }}
     #map-container {{
       width: 100%;
       height: 100%;
-      background: rgba(15, 23, 42, 0.65);
+      background: #0F172A;
       border: 1px solid #334155;
       border-radius: 12px;
       overflow: hidden;
       position: relative;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    }}
+    #map-plot {{
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      position: relative;
+    }}
+    #map-legend-bar {{
+      flex-shrink: 0;
+      background: #0B1120;
+      border-top: 1px solid #1E293B;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }}
+    .legend-row {{
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }}
+    .structure-pill {{
+      display: inline-flex;
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      border-radius: 4px;
+      overflow: hidden;
+      font-size: 0.68rem;
+      font-weight: 800;
+      line-height: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }}
+    .pill-half {{
+      padding: 2px 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95), 0 0 3px #000000;
+      white-space: nowrap;
+    }}
+    .pill-left {{
+      background: #2563EB;
+      color: #FFFFFF;
+      border-right: 1.5px solid #FFFFFF;
+    }}
+    .pill-right {{
+      background-color: #DC2626;
+      color: #FFFFFF;
+      background-image: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 3px,
+        rgba(255, 255, 255, 0.35) 3px,
+        rgba(255, 255, 255, 0.35) 5px
+      );
+    }}
+    .legend-divider {{
+      width: 1px;
+      height: 16px;
+      background: #334155;
+    }}
+    .legend-item {{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.74rem;
+      color: #CBD5E1;
+      white-space: nowrap;
+    }}
+    .legend-swatch-pair {{
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }}
+    .legend-swatch {{
+      width: 13px;
+      height: 13px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }}
+    .legend-swatch-hatch {{
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      border: 1px solid #FFFFFF;
+      background-image: repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.8) 2px, rgba(255,255,255,0.8) 3.5px);
+    }}
+    .legend-swatch-hatch.hatch-dem {{
+      background-color: #2563EB;
+    }}
+    .legend-swatch-hatch.hatch-rep {{
+      background-color: #DC2626;
+    }}
+    .legend-swatch-flip {{
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      border: 1.5px solid #FFFFFF;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      color: #FFFFFF;
+      font-weight: 700;
+      line-height: 1;
+    }}
+    .legend-swatch-flip.flip-dem {{
+      background-color: #0284C7;
+    }}
+    .legend-swatch-flip.flip-rep {{
+      background-color: #DC2626;
     }}
     #balance-panel {{
       width: 100%;
@@ -582,8 +698,41 @@ def build_interactive_dashboard_html(
 </head>
 <body>
   <div class="dashboard-grid">
-    <!-- Map Container -->
-    <div id="map-container"></div>
+    <!-- Map Container with integrated Gestalt Legend -->
+    <div id="map-container">
+      <div id="map-plot"></div>
+      <div id="map-legend-bar">
+        <div class="legend-row">
+          <span class="structure-pill">
+            <span class="pill-half pill-left">Safe Seat</span>
+            <span class="pill-half pill-right">2026 Seat Race</span>
+          </span>
+          <div class="legend-divider"></div>
+          <div class="legend-item">
+            <span class="legend-swatch-pair">
+              <span class="legend-swatch-hatch hatch-dem"></span>
+              <span class="legend-swatch-hatch hatch-rep"></span>
+            </span>
+            <span>2026 Race in Play</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-swatch-pair">
+              <span class="legend-swatch-flip flip-dem">⇄</span>
+              <span class="legend-swatch-flip flip-rep">⇄</span>
+            </span>
+            <span>Projected Party Flip</span>
+          </div>
+        </div>
+        <div class="legend-row legend-colors">
+          <div class="legend-item"><span class="legend-swatch" style="background:#2563EB;"></span> <span>Dem Lead / Safe</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#93C5FD;"></span> <span>Dem Toss-Up (≤2 pp)</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#DC2626;"></span> <span>Rep Lead / Safe</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#FCA5A5;"></span> <span>Rep Toss-Up (≤2 pp)</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#EAB308;"></span> <span>Independent</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#64748B;"></span> <span>Unpolled</span></div>
+        </div>
+      </div>
+    </div>
 
     <!-- Balance of Power Seat Balance Panel -->
     <div id="balance-panel">
@@ -754,18 +903,18 @@ def build_interactive_dashboard_html(
       showlegend: false
     }};
 
-    Plotly.newPlot('map-container', [mapTraceHalves, mapTraceOutlines, mapTraceText, mapTraceFlips], mapLayout, {{ responsive: true, displayModeBar: false }});
+    Plotly.newPlot('map-plot', [mapTraceHalves, mapTraceOutlines, mapTraceText, mapTraceFlips], mapLayout, {{ responsive: true, displayModeBar: false }});
 
     // Dedicated top-level overlay layer for contested seats with diagonal hatch pattern and crisp border
     function updateContestedOverlay() {{
-      const choroplethGroup = document.querySelector('#map-container .choropleth') || 
-                              document.querySelector('#map-container .geolayer');
+      const choroplethGroup = document.querySelector('#map-plot .choropleth') || 
+                              document.querySelector('#map-plot .geolayer');
       if (!choroplethGroup) return;
 
       // 1. Inject SVG pattern definition for diagonal hatching
       let defs = document.getElementById('map-defs');
       if (!defs) {{
-        const svgRoot = document.querySelector('#map-container svg');
+        const svgRoot = document.querySelector('#map-plot svg');
         if (svgRoot) {{
           defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
           defs.setAttribute('id', 'map-defs');
@@ -816,7 +965,7 @@ def build_interactive_dashboard_html(
       }}
 
       // 3. Synchronize overlay paths with live base choropleth paths at current zoom level
-      const allPaths = document.querySelectorAll('#map-container path.choroplethlocation');
+      const allPaths = document.querySelectorAll('#map-plot path.choroplethlocation');
       const numHalves = Math.min(locs.length, allPaths.length);
       for (let idx = 0; idx < numHalves; idx++) {{
         const p = allPaths[idx];
@@ -857,9 +1006,9 @@ def build_interactive_dashboard_html(
 
     // Ensure state abbreviation text labels and flip badges stay strictly on the top-most visual layer
     function bringTextToFront() {{
-      const geoContainer = document.querySelector('#map-container .geo') || 
-                           document.querySelector('#map-container .geolayer');
-      const scatterGroups = document.querySelectorAll('#map-container .scattergeo, #map-container g.trace.scattergeo');
+      const geoContainer = document.querySelector('#map-plot .geo') || 
+                           document.querySelector('#map-plot .geolayer');
+      const scatterGroups = document.querySelectorAll('#map-plot .scattergeo, #map-plot g.trace.scattergeo');
       const overlayGroup = document.getElementById('contested-stroke-overlay');
 
       if (geoContainer) {{
@@ -874,7 +1023,7 @@ def build_interactive_dashboard_html(
     let observer = null;
     function setupHatchObserver() {{
       if (observer) return;
-      const choroplethLayer = document.querySelector('#map-container .choropleth');
+      const choroplethLayer = document.querySelector('#map-plot .choropleth');
       if (choroplethLayer) {{
         observer = new MutationObserver(() => {{
           updateContestedOverlay();
@@ -885,7 +1034,7 @@ def build_interactive_dashboard_html(
     }}
 
     // Hook Plotly redraw, zoom, and relayout events
-    const mapDiv = document.getElementById('map-container');
+    const mapDiv = document.getElementById('map-plot');
     if (mapDiv && mapDiv.on) {{
       mapDiv.on('plotly_afterplot', () => {{
         updateContestedOverlay();

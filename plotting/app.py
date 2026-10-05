@@ -21,28 +21,13 @@ from map_builder import build_interactive_dashboard_html
 
 
 def set_custom_styles() -> None:
-    """Inject styling for clean typography, container sizing, and visual legend."""
+    """Inject styling for clean container sizing and layout spacing."""
     st.markdown(
         """
         <style>
-        .legend-card {
-            background-color: #F8FAFC;
-            border: 1px solid #E2E8F0;
-            border-radius: 8px;
-            padding: 14px 18px;
-            margin-top: 10px;
-            font-size: 0.88rem;
-            color: #1E293B;
-            line-height: 1.6;
-        }
-        .color-badge {
-            display: inline-block;
-            width: 14px;
-            height: 14px;
-            border-radius: 3px;
-            margin-right: 8px;
-            vertical-align: middle;
-            border: 1px solid rgba(0, 0, 0, 0.15);
+        .block-container {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
         }
         </style>
         """,
@@ -52,7 +37,7 @@ def set_custom_styles() -> None:
 
 def main() -> None:
     st.set_page_config(
-        page_title="US Senate 2026 — Geographic Seat Map & Composition",
+        page_title="US Senate Elections Polls 2026",
         page_icon="🗳️",
         layout="wide",
         initial_sidebar_state="collapsed",
@@ -61,13 +46,8 @@ def main() -> None:
     set_custom_styles()
 
     # Title and concise description
-    st.title("🗳️ US Senate 2026 — Static Flip Analysis & Chamber Balance of Power")
-    st.caption(
-        "A strictly static, non-interactive visual representation communicating the projected balance of power "
-        "and seat flips under current 2026 polling. States are bounded by black borders and divided internally by white lines "
-        "into their two US Senators. Circular transfer badges (⇄) mark the 7 decisive battlegrounds where polls project a party flip, "
-        "accompanied by the 100-seat Majority Threshold Bar showing the path to 52 seats."
-    )
+    st.title("US Senate Elections Polls 2026")
+    st.caption("2026 general election poll predictions and projected chamber balance of power.")
 
     # Check for debug mode via query parameter or sidebar control
     query_debug = st.query_params.get("debug", "").lower()
@@ -112,48 +92,11 @@ def main() -> None:
     split_geojson = generate_split_geojson()
     outlines_geojson = generate_state_outlines_geojson()
 
-    # Render static client-side dashboard (Map + Majority 50 Threshold Bar & Flip Ledger)
+    # Render static client-side dashboard with integrated Gestalt map legend
     dashboard_html = build_interactive_dashboard_html(
         senators_df, split_geojson, outlines_geojson, debug_mode=debug_mode
     )
-    components.html(dashboard_html, height=710, scrolling=False)
-
-    # Clean Visual Legend
-    leg_col1, leg_col2 = st.columns(2)
-
-    with leg_col1:
-        st.markdown(
-            """
-            <div class="legend-card">
-                <b>🎨 Color Legend:</b><br>
-                <div><span class="color-badge" style="background-color: #2563EB;"></span> <b>Solid Blue:</b> Democratic Incumbent / Solid Democrat Lead (> 2 pp)</div>
-                <div><span class="color-badge" style="background-color: #93C5FD;"></span> <b>Light Blue:</b> Toss-Up Race — Slight Democrat Lead (≤ 2 pp)</div>
-                <div><span class="color-badge" style="background-color: #DC2626;"></span> <b>Solid Red:</b> Republican Incumbent / Solid Republican Lead (> 2 pp)</div>
-                <div><span class="color-badge" style="background-color: #FCA5A5;"></span> <b>Light Red:</b> Toss-Up Race — Slight Republican Lead (≤ 2 pp)</div>
-                <div><span class="color-badge" style="background-color: #EAB308;"></span> <b>Golden Yellow:</b> Independent Senator (caucusing with DEM)</div>
-                <div><span class="color-badge" style="background-color: #64748B;"></span> <b>Slate Gray:</b> Contested seat with no general election poll data yet</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with leg_col2:
-        st.markdown(
-            """
-            <div class="legend-card">
-                <b>🏛️ Representation & Seat Flips (2 Senators per State):</b><br>
-                • <b>Outer Black Border:</b> Clearly separates each of the 50 US states.<br>
-                • <b>Inner White Line:</b> Divides each state into its two Senate seats (West = Safe, East = 2026 Race).<br>
-                • <b>Contested Races Texture (35 Seats):</b> All 35 seats up for election in 2026 are highlighted with a diagonal hatch texture pattern (///) and crisp white border over their projected party color.<br>
-                • <b>⇄ Transfer Badges (Style 2):</b> Bold circular badges mark the 7 battlegrounds projecting a party flip:<br>
-                  &nbsp;&nbsp;🔵 <b>Blue Badge (⇄):</b> Republican seat flipping to Democrat (AK, KY, ME, NE, NC, OH).<br>
-                  &nbsp;&nbsp;🔴 <b>Red Badge (⇄):</b> Democratic seat flipping to Republican (MI).<br>
-                • <b>Majority Bar:</b> Displays the 100-seat distribution across the 50-seat threshold (projecting 52 DEM vs 48 REP).
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
+    components.html(dashboard_html, height=725, scrolling=False)
 
 
 if __name__ == "__main__":
