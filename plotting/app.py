@@ -21,13 +21,65 @@ from map_builder import build_interactive_dashboard_html
 
 
 def set_custom_styles() -> None:
-    """Inject styling for clean container sizing and layout spacing."""
+    """Inject responsive viewport styling to eliminate margins, void, and scrollbars."""
     st.markdown(
         """
         <style>
+        /* Base page background and reset */
+        html, body, .stApp {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #0B1120 !important;
+        }
+        /* Hide unnecessary empty Streamlit header bar to recover vertical space */
+        header[data-testid="stHeader"], .stAppHeader {
+            display: none !important;
+        }
+        /* Tighten internal Streamlit vertical block gaps */
+        div[data-testid="stVerticalBlock"] {
+            gap: 0.25rem !important;
+        }
+        /* Expand Streamlit block-container to full width with crisp padding */
         .block-container {
-            padding-top: 2rem;
-            padding-bottom: 2rem;
+            max-width: 100% !important;
+            width: 100% !important;
+            padding: 0.4rem 1.2rem 0.2rem 1.2rem !important;
+            box-sizing: border-box !important;
+        }
+        /* Title and caption */
+        h1 {
+            margin: 0 !important;
+            padding: 0 !important;
+            font-size: 1.50rem !important;
+            line-height: 1.15 !important;
+            color: #F8FAFC !important;
+        }
+        [data-testid="stCaptionContainer"] {
+            margin: 0 !important;
+            padding: 0 !important;
+            font-size: 0.80rem !important;
+            color: #94A3B8 !important;
+        }
+        /* Make Streamlit component iframe dynamically responsive without triggering root page scroll */
+        div[data-testid="stCustomComponentV1"],
+        div[data-testid="stCustomComponentV1"] > iframe,
+        iframe[title="streamlit.components.v1.html"],
+        iframe {
+            width: 100% !important;
+            height: calc(100vh - 100px) !important;
+            min-height: 520px !important;
+            border: none !important;
+            display: block !important;
+        }
+        /* Large displays (2K / 4K / external monitors): expand fully */
+        @media (min-height: 950px) {
+            div[data-testid="stCustomComponentV1"],
+            div[data-testid="stCustomComponentV1"] > iframe,
+            iframe[title="streamlit.components.v1.html"],
+            iframe {
+                height: calc(100vh - 110px) !important;
+                min-height: 750px !important;
+            }
         }
         </style>
         """,
@@ -96,7 +148,7 @@ def main() -> None:
     dashboard_html = build_interactive_dashboard_html(
         senators_df, split_geojson, outlines_geojson, debug_mode=debug_mode
     )
-    components.html(dashboard_html, height=725, scrolling=False)
+    components.html(dashboard_html, height=580, scrolling=False)
 
 
 if __name__ == "__main__":
