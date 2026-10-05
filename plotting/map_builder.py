@@ -377,12 +377,26 @@ def build_interactive_dashboard_html(
           <div class="legend-item"><span class="legend-swatch" style="background:#64748B;"></span> <span>Unpolled</span></div>
     """
 
-    legend_colors_polls_only_html = """
+    dem_flip_states = ", ".join(f["abbrev"] for f in flips if f["flip_incoming_party"] == "DEM")
+    rep_flip_states = ", ".join(f["abbrev"] for f in flips if f["flip_incoming_party"] == "REP")
+
+    rep_flip_bar_html = (
+        f'<div class="bar-seg seg-rep-flips" style="width: {summary["rep_flips"]}%;" title="{summary["rep_flips"]} Republican Flip from DEM ({rep_flip_states})">+{summary["rep_flips"]}★</div>'
+        if summary["rep_flips"] > 0
+        else ""
+    )
+    rep_flip_legend_html = (
+        f'<div class="legend-item"><span class="legend-swatch" style="background:#F87171;"></span> <b>+{summary["rep_flips"]}</b> REP Flip (Gain)</div>'
+        if summary["rep_flips"] > 0
+        else ""
+    )
+
+    legend_colors_polls_only_html = f"""
           <div class="legend-item"><span class="legend-swatch" style="background:#2563EB;"></span> <span>Dem Lead</span></div>
           <div class="legend-item"><span class="legend-swatch" style="background:#93C5FD;"></span> <span>Dem Toss-Up (≤2 pp)</span></div>
           <div class="legend-item"><span class="legend-swatch" style="background:#DC2626;"></span> <span>Rep Lead</span></div>
           <div class="legend-item"><span class="legend-swatch" style="background:#FCA5A5;"></span> <span>Rep Toss-Up (≤2 pp)</span></div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#64748B;"></span> <span>Unpolled (5 seats)</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#64748B;"></span> <span>Unpolled ({summary['unpolled']} seats)</span></div>
           <div class="legend-item"><span class="legend-swatch" style="background:#1E293B; border: 1px solid #475569;"></span> <span>Safe / Muted (65 seats)</span></div>
     """
 
@@ -926,7 +940,7 @@ def build_interactive_dashboard_html(
       <div class="bar-section">
         <div class="bar-header">
           <span><b>Seat Balance Bar (0 to 100):</b></span>
-          <span style="color: #38BDF8; font-weight: 700; font-size: 0.88rem;">DEM crosses 50-Seat Mark (52 DEM vs. 48 REP)</span>
+          <span style="color: #38BDF8; font-weight: 700; font-size: 0.88rem;">DEM crosses 50-Seat Mark ({summary['projected_dem_total']} DEM vs. {summary['projected_rep_total']} REP)</span>
         </div>
 
         <div class="bar-wrapper">
@@ -935,17 +949,17 @@ def build_interactive_dashboard_html(
           <div class="bar-track">
             <div class="bar-seg seg-dem-safe" style="width: {summary['safe_dem_ind']}%;" title="{summary['safe_dem_ind']} Safe Democratic & Independent Seats">{summary['safe_dem_ind']} Safe</div>
             <div class="bar-seg seg-dem-holds" style="width: {summary['dem_holds']}%;" title="{summary['dem_holds']} Democratic Poll Holds">{summary['dem_holds']} Holds</div>
-            <div class="bar-seg seg-dem-flips" style="width: {summary['dem_flips']}%;" title="{summary['dem_flips']} Democratic Flips from GOP (AK, KY, ME, NE, NC, OH)">+6★</div>
-            <div class="bar-seg seg-unpolled" style="width: {summary['unpolled']}%;" title="{summary['unpolled']} Seats with No General Election Polls (3 DEM safe, 2 REP safe)">5</div>
-            <div class="bar-seg seg-rep-flips" style="width: {summary['rep_flips']}%;" title="{summary['rep_flips']} Republican Flip from DEM (MI)"></div>
+            <div class="bar-seg seg-dem-flips" style="width: {summary['dem_flips']}%;" title="{summary['dem_flips']} Democratic Flips from GOP ({dem_flip_states})">+{summary['dem_flips']}★</div>
+            <div class="bar-seg seg-unpolled" style="width: {summary['unpolled']}%;" title="{summary['unpolled']} Seats with No General Election Polls ({summary['unpolled_dem']} DEM, {summary['unpolled_rep']} REP)">{summary['unpolled']}</div>
+            {rep_flip_bar_html}
             <div class="bar-seg seg-rep-holds" style="width: {summary['rep_holds']}%;" title="{summary['rep_holds']} Republican Poll Holds">{summary['rep_holds']} Holds</div>
             <div class="bar-seg seg-rep-safe" style="width: {summary['safe_rep']}%;" title="{summary['safe_rep']} Safe Republican Seats">{summary['safe_rep']} Safe</div>
           </div>
         </div>
 
         <div class="bar-sublegend">
-          <span>🔵 <b>{summary['projected_dem_total']} DEM Coalition</b> (34 Safe + 9 Holds + 6 Flips + 3 Unpolled)</span>
-          <span>🔴 <b>{summary['projected_rep_total']} Republican Party</b> (31 Safe + 14 Holds + 1 Flip + 2 Unpolled)</span>
+          <span>🔵 <b>{summary['projected_dem_total']} DEM Coalition</b> ({summary['safe_dem_ind']} Safe + {summary['dem_holds']} Holds + {summary['dem_flips']} Flips + {summary['unpolled_dem']} Unpolled)</span>
+          <span>🔴 <b>{summary['projected_rep_total']} Republican Party</b> ({summary['safe_rep']} Safe + {summary['rep_holds']} Holds + {summary['rep_flips']} Flips + {summary['unpolled_rep']} Unpolled)</span>
         </div>
       </div>
 
@@ -953,13 +967,13 @@ def build_interactive_dashboard_html(
       <div class="bar-legend-card">
         <div class="legend-card-title">Seat Composition Key</div>
         <div class="bar-legend-grid">
-          <div class="legend-item"><span class="legend-swatch" style="background:#1E40AF;"></span> <b>34</b> Safe DEM & IND</div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#2563EB;"></span> <b>9</b> DEM Holds</div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#0284C7; border: 1px solid #38BDF8;"></span> <b>+6</b> DEM Flips (Gain)</div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#64748B;"></span> <b>5</b> Unpolled Seats</div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#F87171;"></span> <b>+1</b> REP Flip (Gain)</div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#DC2626;"></span> <b>14</b> REP Holds</div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#991B1B;"></span> <b>31</b> Safe REP</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#1E40AF;"></span> <b>{summary['safe_dem_ind']}</b> Safe DEM & IND</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#2563EB;"></span> <b>{summary['dem_holds']}</b> DEM Holds</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#0284C7; border: 1px solid #38BDF8;"></span> <b>+{summary['dem_flips']}</b> DEM Flips (Gain)</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#64748B;"></span> <b>{summary['unpolled']}</b> Unpolled Seats</div>
+          {rep_flip_legend_html}
+          <div class="legend-item"><span class="legend-swatch" style="background:#DC2626;"></span> <b>{summary['rep_holds']}</b> REP Holds</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#991B1B;"></span> <b>{summary['safe_rep']}</b> Safe REP</div>
         </div>
       </div>
     </div>

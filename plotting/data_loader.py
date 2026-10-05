@@ -89,20 +89,15 @@ def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
         valid_polls["porc_democrata_sillon_en_juego"], errors="coerce"
     )
 
+    # Require both candidate percentages for genuine head-to-head general election matchups
     clean_polls = valid_polls.dropna(
         subset=["porc_republicano_sillon_en_juego", "porc_democrata_sillon_en_juego"],
-        how="all",
+        how="any",
     )
 
     # Prefer individual polls if available; fallback to all valid rows
     individual = clean_polls[clean_polls["fuente_encuesta"] != "Average"]
-    to_use = (
-        individual
-        if not individual.empty and individual[
-            ["porc_republicano_sillon_en_juego", "porc_democrata_sillon_en_juego"]
-        ].notna().any().any()
-        else clean_polls
-    )
+    to_use = individual if not individual.empty else clean_polls
 
     if not to_use.empty:
         mean_rep = to_use["porc_republicano_sillon_en_juego"].mean()
@@ -130,26 +125,99 @@ def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
         else:
             leader = "TIE"
             sub_category = "TIE"
-    elif mean_dem is not None and pd.notna(mean_dem):
-        margin = None
-        leader = "DEM"
-        sub_category = "DEM"
-    elif mean_rep is not None and pd.notna(mean_rep):
-        margin = None
-        leader = "REP"
-        sub_category = "REP"
-    else:
-        margin = None
-        leader = "NO_DATA"
-        sub_category = "NO_DATA"
+
+        return {
+            "leader": leader,
+            "sub_category": sub_category,
+            "margin": margin,
+            "mean_dem": mean_dem,
+            "mean_rep": mean_rep,
+            "n_polls": n_polls,
+            "is_prediction": False,
+            "consensus_rating": None,
+        }
+
+    # If no head-to-head numerical polls, evaluate forecaster predictions consensus
+    pred_rows = state_polls[
+        state_polls["error"].astype(str).str.startswith("Prediction:")
+    ].copy()
+
+    if not pred_rows.empty:
+        raw_ratings = [
+            str(err).replace("Prediction:", "").strip()
+            for err in pred_rows["error"]
+            if pd.notna(err)
+        ]
+
+        score = 0
+        counts: dict[str, int] = {}
+        for r in raw_ratings:
+            counts[r] = counts.get(r, 0) + 1
+            low = r.lower()
+            if "solid d" in low or "safe d" in low:
+                score += 3
+            elif "likely d" in low:
+                score += 2
+            elif "lean d" in low or "tilt d" in low:
+                score += 1
+            elif "solid r" in low or "safe r" in low:
+                score -= 3
+            elif "likely r" in low:
+                score -= 2
+            elif "lean r" in low or "tilt r" in low:
+                score -= 1
+
+        most_frequent = max(counts, key=counts.get) if counts else "Safe"
+
+        if score >= 4:
+            leader = "DEM"
+            sub_category = "DEM"
+            margin = 15.0
+        elif 2 <= score < 4:
+            leader = "DEM"
+            sub_category = "DEM"
+            margin = 7.0
+        elif 1 <= score < 2:
+            leader = "DEM"
+            sub_category = "DEM_LEAN"
+            margin = 2.0
+        elif -1 < score < 1:
+            leader = "TIE"
+            sub_category = "TIE"
+            margin = 0.0
+        elif -2 < score <= -1:
+            leader = "REP"
+            sub_category = "REP_LEAN"
+            margin = -2.0
+        elif -4 < score <= -2:
+            leader = "REP"
+            sub_category = "REP"
+            margin = -7.0
+        else:
+            leader = "REP"
+            sub_category = "REP"
+            margin = -15.0
+
+        return {
+            "leader": leader,
+            "sub_category": sub_category,
+            "margin": margin,
+            "mean_dem": None,
+            "mean_rep": None,
+            "n_polls": len(pred_rows),
+            "is_prediction": True,
+            "consensus_rating": most_frequent,
+        }
 
     return {
-        "leader": leader,
-        "sub_category": sub_category,
-        "margin": margin,
-        "mean_dem": mean_dem,
-        "mean_rep": mean_rep,
-        "n_polls": n_polls,
+        "leader": "NO_DATA",
+        "sub_category": "NO_DATA",
+        "margin": None,
+        "mean_dem": None,
+        "mean_rep": None,
+        "n_polls": 0,
+        "is_prediction": False,
+        "consensus_rating": None,
     }
 
 
@@ -182,34 +250,42 @@ def _build_tooltip(
             sub_cat = poll_data["sub_category"]
             margin = poll_data["margin"]
             n_polls = poll_data["n_polls"]
-            dem_avg = f"{poll_data['mean_dem']:.1f}%" if poll_data["mean_dem"] is not None and pd.notna(poll_data["mean_dem"]) else "N/A"
-            rep_avg = f"{poll_data['mean_rep']:.1f}%" if poll_data["mean_rep"] is not None and pd.notna(poll_data["mean_rep"]) else "N/A"
+            is_pred = poll_data.get("is_prediction", False)
 
-            if sub_cat == "DEM":
-                forecast_desc = "Democrat Leading (> 2 pp)"
-            elif sub_cat == "DEM_LEAN":
-                forecast_desc = "Toss-Up / Slight Democrat Lead (≤ 2 pp)"
-            elif sub_cat == "REP":
-                forecast_desc = "Republican Leading (> 2 pp)"
-            elif sub_cat == "REP_LEAN":
-                forecast_desc = "Toss-Up / Slight Republican Lead (≤ 2 pp)"
-            elif sub_cat == "TIE":
-                forecast_desc = "Dead Heat / Exactly Tied (0.0 pp)"
-            else:
-                forecast_desc = "No Poll Data Available"
+            if is_pred:
+                consensus_rating = poll_data.get("consensus_rating", "Safe")
+                lines.append(f"<b>📊 Race Forecast:</b> Forecaster Consensus ({consensus_rating})")
+                lines.append(f"<b>Forecasters Analyzed:</b> {n_polls} ratings (Cook, Sabato, Inside Elections, etc.)")
+                lines.append("<i>Safe seat — Forecaster consensus rating used in place of direct polling</i>")
+            elif leader != "NO_DATA":
+                dem_avg = f"{poll_data['mean_dem']:.1f}%" if poll_data["mean_dem"] is not None and pd.notna(poll_data["mean_dem"]) else "N/A"
+                rep_avg = f"{poll_data['mean_rep']:.1f}%" if poll_data["mean_rep"] is not None and pd.notna(poll_data["mean_rep"]) else "N/A"
 
-            margin_str = f"DEM +{margin:.1f} pp" if (margin is not None and margin > 0) else (
-                f"REP +{abs(margin):.1f} pp" if (margin is not None and margin < 0) else (
-                    "Tied (0.0 pp)" if margin == 0 else "N/A"
+                if sub_cat == "DEM":
+                    forecast_desc = "Democrat Leading (> 2 pp)"
+                elif sub_cat == "DEM_LEAN":
+                    forecast_desc = "Toss-Up / Slight Democrat Lead (≤ 2 pp)"
+                elif sub_cat == "REP":
+                    forecast_desc = "Republican Leading (> 2 pp)"
+                elif sub_cat == "REP_LEAN":
+                    forecast_desc = "Toss-Up / Slight Republican Lead (≤ 2 pp)"
+                elif sub_cat == "TIE":
+                    forecast_desc = "Dead Heat / Exactly Tied (0.0 pp)"
+                else:
+                    forecast_desc = "No Poll Data Available"
+
+                margin_str = f"DEM +{margin:.1f} pp" if (margin is not None and margin > 0) else (
+                    f"REP +{abs(margin):.1f} pp" if (margin is not None and margin < 0) else (
+                        "Tied (0.0 pp)" if margin == 0 else "N/A"
+                    )
                 )
-            )
 
-            lines.append(f"<b>📊 2026 Poll Forecast:</b> {forecast_desc}")
-            if leader != "NO_DATA":
+                lines.append(f"<b>📊 2026 Poll Forecast:</b> {forecast_desc}")
                 lines.append(f"<b>Poll Margin:</b> {margin_str}")
                 lines.append(f"<b>Averages:</b> DEM {dem_avg} | REP {rep_avg}")
                 lines.append(f"<b>Polls Analyzed:</b> {n_polls}")
             else:
+                lines.append("<b>📊 2026 Poll Forecast:</b> No Poll Data Available")
                 lines.append("<i>No general election polls found yet</i>")
     else:
         lines.append("─────────────────────────────")

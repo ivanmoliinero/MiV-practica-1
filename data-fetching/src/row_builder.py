@@ -67,20 +67,17 @@ def build_rows_for_state(
     meta: dict,
     poll_tables: list[pd.DataFrame],
     incumbent_info: dict | None = None,
+    predictions: list[dict] | None = None,
 ) -> list[dict]:
     """
     Builds structured CSV rows for a given state race, aligning candidate names
     with REP/DEM columns, extracting pollster sources and fieldwork dates,
     and filtering phantom rows where neither candidate has percentages.
+    If no head-to-head polling rows are found, falls back to qualitative
+    forecaster prediction ratings (Cook, Sabato, Inside Elections, etc.).
     """
     cand1, party1 = meta.get("candidate_1"), meta.get("party_1")
     cand2, party2 = meta.get("candidate_2"), meta.get("party_2")
-
-    if not cand1 and not cand2:
-        return [create_fallback_row(state, incumbent_info, meta, "Candidates/nominees not yet identified on Wikipedia")]
-
-    if not poll_tables:
-        return [create_fallback_row(state, incumbent_info, meta, "No general election polling data found on page")]
 
     incumbent_name = incumbent_info.get("titular_actual_sillon") if incumbent_info else None
     incumbent_party = incumbent_info.get("partido_titular_sillon") if incumbent_info else None
@@ -94,28 +91,49 @@ def build_rows_for_state(
         rep_name, dem_name = cand1, cand2
 
     rows = []
-    for df in poll_tables:
-        rep_col = next((c for c in df.columns if col_matches_candidate(c, rep_name)), None) if rep_name else None
-        dem_col = next((c for c in df.columns if col_matches_candidate(c, dem_name)), None) if dem_name else None
-        unk_col = find_matching_col(df, ["undecided", "don't know", "dk", "other/undecided", "other"])
-        src_col = find_matching_col(df, ["poll source", "source of poll", "pollster", "firm", "surveyor", "source"], exclude=["date"])
-        date_col = find_matching_col(df, ["date(s) administered", "dates administered", "date administered", "dates", "date"], exclude=["update"])
+    if poll_tables:
+        for df in poll_tables:
+            rep_col = next((c for c in df.columns if col_matches_candidate(c, rep_name)), None) if rep_name else None
+            dem_col = next((c for c in df.columns if col_matches_candidate(c, dem_name)), None) if dem_name else None
+            unk_col = find_matching_col(df, ["undecided", "don't know", "dk", "other/undecided", "other"])
+            src_col = find_matching_col(df, ["poll source", "source of poll", "pollster", "firm", "surveyor", "source"], exclude=["date"])
+            date_col = find_matching_col(df, ["date(s) administered", "dates administered", "date administered", "dates", "date"], exclude=["update"])
 
-        rep_pct = clean_pct_series(df[rep_col]) if rep_col else pd.Series([None] * len(df))
-        dem_pct = clean_pct_series(df[dem_col]) if dem_col else pd.Series([None] * len(df))
-        unk_pct = clean_pct_series(df[unk_col]) if unk_col else pd.Series([None] * len(df))
+            rep_pct = clean_pct_series(df[rep_col]) if rep_col else pd.Series([None] * len(df))
+            dem_pct = clean_pct_series(df[dem_col]) if dem_col else pd.Series([None] * len(df))
+            unk_pct = clean_pct_series(df[unk_col]) if unk_col else pd.Series([None] * len(df))
 
-        for i in range(len(df)):
-            rep_v = rep_pct.iloc[i] if (rep_col and i < len(rep_pct)) else None
-            dem_v = dem_pct.iloc[i] if (dem_col and i < len(dem_pct)) else None
-            unk_v = unk_pct.iloc[i] if (unk_col and i < len(unk_pct)) else None
-            src_v = clean_text_field(df[src_col].iloc[i]) if (src_col and i < len(df)) else None
-            date_v = clean_text_field(df[date_col].iloc[i]) if (date_col and i < len(df)) else None
+            for i in range(len(df)):
+                rep_v = rep_pct.iloc[i] if (rep_col and i < len(rep_pct)) else None
+                dem_v = dem_pct.iloc[i] if (dem_col and i < len(dem_pct)) else None
+                unk_v = unk_pct.iloc[i] if (unk_col and i < len(unk_pct)) else None
+                src_v = clean_text_field(df[src_col].iloc[i]) if (src_col and i < len(df)) else None
+                date_v = clean_text_field(df[date_col].iloc[i]) if (date_col and i < len(df)) else None
 
-            # Discard phantom rows where neither major party percentage exists
-            if pd.isna(rep_v) and pd.isna(dem_v):
-                continue
+                # Discard rows that are not head-to-head general election matchups
+                if pd.isna(rep_v) or pd.isna(dem_v):
+                    continue
 
+                rows.append({
+                    "estado": state,
+                    "año": YEAR,
+                    "titular_actual_sillon": incumbent_name,
+                    "partido_titular_sillon": incumbent_party,
+                    "partido_candidato_actual_1": party1,
+                    "candidato_actual_1": cand1,
+                    "partido_candidato_actual_2": party2,
+                    "candidato_actual_2": cand2,
+                    "fuente_encuesta": src_v,
+                    "fecha_encuesta": date_v,
+                    "porc_republicano_sillon_en_juego": rep_v if pd.notna(rep_v) else None,
+                    "porc_democrata_sillon_en_juego": dem_v if pd.notna(dem_v) else None,
+                    "indecision": unk_v if pd.notna(unk_v) else None,
+                    "error": None,
+                })
+
+    # If no head-to-head numerical polls were extracted, fall back to forecaster predictions
+    if not rows and predictions:
+        for pred in predictions:
             rows.append({
                 "estado": state,
                 "año": YEAR,
@@ -125,16 +143,16 @@ def build_rows_for_state(
                 "candidato_actual_1": cand1,
                 "partido_candidato_actual_2": party2,
                 "candidato_actual_2": cand2,
-                "fuente_encuesta": src_v,
-                "fecha_encuesta": date_v,
-                "porc_republicano_sillon_en_juego": rep_v if pd.notna(rep_v) else None,
-                "porc_democrata_sillon_en_juego": dem_v if pd.notna(dem_v) else None,
-                "indecision": unk_v if pd.notna(unk_v) else None,
-                "error": None,
+                "fuente_encuesta": pred["source"],
+                "fecha_encuesta": pred.get("date"),
+                "porc_republicano_sillon_en_juego": None,
+                "porc_democrata_sillon_en_juego": None,
+                "indecision": None,
+                "error": f"Prediction: {pred['ranking']}",
             })
 
     if not rows:
-        return [create_fallback_row(state, incumbent_info, meta, "Polling tables found but could not extract candidate percentages")]
+        return [create_fallback_row(state, incumbent_info, meta, "No general election polling data or predictions found on page")]
 
     return rows
 
