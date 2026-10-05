@@ -815,24 +815,28 @@ def build_interactive_dashboard_html(
         choroplethGroup.appendChild(overlayGroup);
       }}
 
-      // 3. Populate overlay paths with diagonal hatch fill and crisp white boundary
-      if (overlayGroup.children.length === 0) {{
-        const allPaths = document.querySelectorAll('#map-container path.choroplethlocation');
-        const numHalves = Math.min(locs.length, allPaths.length);
-        for (let idx = 0; idx < numHalves; idx++) {{
-          const p = allPaths[idx];
-          const d = p.__data__;
-          let loc = null;
-          if (d) {{
-            loc = d.id || (d.properties && d.properties.id) || (d.properties && (d.properties.state + '_' + d.properties.side));
-          }}
-          if (!loc) {{
-            loc = locs[idx];
-          }}
-          if (contestedSet.has(loc)) {{
-            const overlayPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            overlayPath.setAttribute('d', p.getAttribute('d'));
+      // 3. Synchronize overlay paths with live base choropleth paths at current zoom level
+      const allPaths = document.querySelectorAll('#map-container path.choroplethlocation');
+      const numHalves = Math.min(locs.length, allPaths.length);
+      for (let idx = 0; idx < numHalves; idx++) {{
+        const p = allPaths[idx];
+        const d = p.__data__;
+        let loc = null;
+        if (d) {{
+          loc = d.id || (d.properties && d.properties.id) || (d.properties && (d.properties.state + '_' + d.properties.side));
+        }}
+        if (!loc) {{
+          loc = locs[idx];
+        }}
+        if (contestedSet.has(loc)) {{
+          const currentD = p.getAttribute('d');
+          if (!currentD) continue;
+
+          let overlayPath = overlayGroup.querySelector(`path[data-loc="${{loc}}"]`);
+          if (!overlayPath) {{
+            overlayPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             overlayPath.setAttribute('class', 'contested-seat-overlay');
+            overlayPath.setAttribute('data-loc', loc);
             overlayPath.style.fill = 'url(#contested-hatch-pattern)';
             overlayPath.style.stroke = '#FFFFFF';
             overlayPath.style.strokeWidth = '2.2px';
@@ -841,6 +845,10 @@ def build_interactive_dashboard_html(
             overlayPath.style.filter = 'drop-shadow(0 0 1.5px rgba(0, 0, 0, 0.75))';
             overlayPath.style.pointerEvents = 'none';
             overlayGroup.appendChild(overlayPath);
+          }}
+          // Dynamically synchronize SVG path geometry so it stays locked during zoom and pan
+          if (overlayPath.getAttribute('d') !== currentD) {{
+            overlayPath.setAttribute('d', currentD);
           }}
         }}
       }}
@@ -862,17 +870,38 @@ def build_interactive_dashboard_html(
       }}
     }}
 
-    // Initialize stroke hierarchy and text layers on load and after any plot redraw
+    // Setup MutationObserver on choropleth layer to instantly mirror any zoom/pan path updates
+    let observer = null;
+    function setupHatchObserver() {{
+      if (observer) return;
+      const choroplethLayer = document.querySelector('#map-container .choropleth');
+      if (choroplethLayer) {{
+        observer = new MutationObserver(() => {{
+          updateContestedOverlay();
+          bringTextToFront();
+        }});
+        observer.observe(choroplethLayer, {{ attributes: true, attributeFilter: ['d'], subtree: true }});
+      }}
+    }}
+
+    // Hook Plotly redraw, zoom, and relayout events
     const mapDiv = document.getElementById('map-container');
     if (mapDiv && mapDiv.on) {{
       mapDiv.on('plotly_afterplot', () => {{
         updateContestedOverlay();
         bringTextToFront();
+        setupHatchObserver();
+      }});
+      mapDiv.on('plotly_relayout', () => {{
+        updateContestedOverlay();
+        bringTextToFront();
       }});
     }}
+
     setTimeout(() => {{
       updateContestedOverlay();
       bringTextToFront();
+      setupHatchObserver();
     }}, 200);
   </script>
 </body>
