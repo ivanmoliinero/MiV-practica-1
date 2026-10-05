@@ -61,21 +61,62 @@ def main() -> None:
     set_custom_styles()
 
     # Title and concise description
-    st.title("🗳️ US Senate 2026 — Interactive Geographic Representation & Balance")
+    st.title("🗳️ US Senate 2026 — Static Flip Analysis & Chamber Balance of Power")
     st.caption(
-        "Each state is bounded by a black border and divided internally by a white line into two halves "
-        "representing its two US Senators. Hover over the button above the map to transition between "
-        "Current Senate and 2026 Poll Predictions with a dynamic gradient. Use the checkbox to isolate the 35 races in play."
+        "A strictly static, non-interactive visual representation communicating the projected balance of power "
+        "and seat flips under current 2026 polling. States are bounded by black borders and divided internally by white lines "
+        "into their two US Senators. Circular transfer badges (⇄) mark the 7 decisive battlegrounds where polls project a party flip, "
+        "accompanied by the 100-seat Majority Threshold Bar showing the path to 52 seats."
     )
+
+    # Check for debug mode via query parameter or sidebar control
+    query_debug = st.query_params.get("debug", "").lower()
+    default_idx = 0
+    if query_debug in ("50", "all_50", "right"):
+        default_idx = 1
+    elif query_debug in ("100", "all_100", "all", "true"):
+        default_idx = 2
+
+    with st.sidebar:
+        st.markdown("### 🛠️ Display & Debug Settings")
+        debug_label = st.radio(
+            "Seat Transfer Symbols (⇄) Display:",
+            options=[
+                "Normal: 7 Battleground Flips",
+                "Debug: All 50 States (Right Halves)",
+                "Debug: All 100 Seats (Both Halves)",
+            ],
+            index=default_idx,
+            help=(
+                "Render flip transfer badges (⇄) across all seats simultaneously to visually evaluate "
+                "positioning, spatial clearance, and boundary alignment."
+            ),
+        )
+
+    debug_mode_map = {
+        "Normal: 7 Battleground Flips": "none",
+        "Debug: All 50 States (Right Halves)": "all_50",
+        "Debug: All 100 Seats (Both Halves)": "all_100",
+    }
+    debug_mode = debug_mode_map[debug_label]
+
+    if debug_mode != "none":
+        st.info(
+            f"🛠️ **Debug Mode Active:** Visualizing seat symbols across "
+            f"{'all 50 states (right half seats)' if debug_mode == 'all_50' else 'all 100 Senate seats (both halves)'}. "
+            "Use the sidebar to switch modes or return to normal projection."
+        )
 
     # Load data and GeoJSON collections
     senators_df = load_all_senators_data()
     split_geojson = generate_split_geojson()
     outlines_geojson = generate_state_outlines_geojson()
 
-    # Render interactive client-side dashboard (Map + Pie Chart with hover gradient transition)
-    dashboard_html = build_interactive_dashboard_html(senators_df, split_geojson, outlines_geojson)
-    components.html(dashboard_html, height=660, scrolling=False)
+    # Render static client-side dashboard (Map + Majority 50 Threshold Bar & Flip Ledger)
+    dashboard_html = build_interactive_dashboard_html(
+        senators_df, split_geojson, outlines_geojson, debug_mode=debug_mode
+    )
+    components.html(dashboard_html, height=710, scrolling=False)
 
     # Clean Visual Legend
     leg_col1, leg_col2 = st.columns(2)
@@ -89,9 +130,8 @@ def main() -> None:
                 <div><span class="color-badge" style="background-color: #93C5FD;"></span> <b>Light Blue:</b> Toss-Up Race — Slight Democrat Lead (≤ 2 pp)</div>
                 <div><span class="color-badge" style="background-color: #DC2626;"></span> <b>Solid Red:</b> Republican Incumbent / Solid Republican Lead (> 2 pp)</div>
                 <div><span class="color-badge" style="background-color: #FCA5A5;"></span> <b>Light Red:</b> Toss-Up Race — Slight Republican Lead (≤ 2 pp)</div>
-                <div><span class="color-badge" style="background-color: #EAB308;"></span> <b>Golden Yellow:</b> Independent Senator</div>
-                <div><span class="color-badge" style="background-color: #64748B;"></span> <b>Slate Gray:</b> Contested seat with no poll data yet</div>
-                <div><span class="color-badge" style="background-color: #1E293B;"></span> <b>Dark Slate:</b> Safe seat unpainted (in isolated view)</div>
+                <div><span class="color-badge" style="background-color: #EAB308;"></span> <b>Golden Yellow:</b> Independent Senator (caucusing with DEM)</div>
+                <div><span class="color-badge" style="background-color: #64748B;"></span> <b>Slate Gray:</b> Contested seat with no general election poll data yet</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -101,17 +141,19 @@ def main() -> None:
         st.markdown(
             """
             <div class="legend-card">
-                <b>🏛️ Representation Structure (2 Senators per State):</b><br>
+                <b>🏛️ Representation & Seat Flips (2 Senators per State):</b><br>
                 • <b>Outer Black Border:</b> Clearly separates each of the 50 US states.<br>
-                • <b>Inner White Line:</b> Divides each state into its two Senate seats.<br>
-                • <b>Left (West) Half:</b> Safe senator not up for election in 2026.<br>
-                • <b>Right (East) Half:</b> Contested seat up for election in 2026.<br>
-                • <b>Contested Races Border:</b> When viewing 2026 Poll Predictions, regions up for election are clearly marked with a high-contrast dashed border around the seat (visible on both black and white borders).<br>
-                • <b>Interactivity:</b> Hover over the button to view 2026 Polls (move cursor away to return to Current Senate). Check the box to isolate only the 35 contested races.
+                • <b>Inner White Line:</b> Divides each state into its two Senate seats (West = Safe, East = 2026 Race).<br>
+                • <b>Contested Races Texture (35 Seats):</b> All 35 seats up for election in 2026 are highlighted with a diagonal hatch texture pattern (///) and crisp white border over their projected party color.<br>
+                • <b>⇄ Transfer Badges (Style 2):</b> Bold circular badges mark the 7 battlegrounds projecting a party flip:<br>
+                  &nbsp;&nbsp;🔵 <b>Blue Badge (⇄):</b> Republican seat flipping to Democrat (AK, KY, ME, NE, NC, OH).<br>
+                  &nbsp;&nbsp;🔴 <b>Red Badge (⇄):</b> Democratic seat flipping to Republican (MI).<br>
+                • <b>Majority Bar:</b> Displays the 100-seat distribution across the 50-seat threshold (projecting 52 DEM vs 48 REP).
             </div>
             """,
             unsafe_allow_html=True,
         )
+
 
 
 if __name__ == "__main__":

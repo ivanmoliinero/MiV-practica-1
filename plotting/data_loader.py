@@ -297,6 +297,20 @@ def load_all_senators_data() -> pd.DataFrame:
                 poll_data=poll_info if is_contested else None,
             )
 
+            # Flip evaluation
+            is_flip = False
+            flip_type = None
+            flip_incoming_party = None
+            if is_contested and poll_info and poll_info["leader"] in ["DEM", "REP"]:
+                if party == "REP" and poll_info["leader"] == "DEM":
+                    is_flip = True
+                    flip_type = "REP_TO_DEM"
+                    flip_incoming_party = "DEM"
+                elif party == "DEM" and poll_info["leader"] == "REP":
+                    is_flip = True
+                    flip_type = "DEM_TO_REP"
+                    flip_incoming_party = "REP"
+
             rows.append({
                 "feature_id": feature_id,
                 "state": state,
@@ -320,14 +334,79 @@ def load_all_senators_data() -> pd.DataFrame:
                 "code_composition": CATEGORY_TO_INT.get(cat_composition, 0),
                 "code_combined": CATEGORY_TO_INT.get(cat_combined, 0),
                 "code_polls_only": CATEGORY_TO_INT.get(cat_polls_only, 7),
+                "is_flip": is_flip,
+                "flip_type": flip_type,
+                "flip_incoming_party": flip_incoming_party,
                 "tooltip": tooltip,
             })
 
     return pd.DataFrame(rows)
 
 
+def get_flip_records(df: pd.DataFrame) -> List[dict]:
+    """Return structured records for the 7 battleground flip seats."""
+    flips_df = df[df["is_flip"]].copy()
+    flips_df["abs_margin"] = flips_df["poll_margin"].abs()
+    flips_df = flips_df.sort_values(by=["flip_incoming_party", "abs_margin"], ascending=[True, False])
+    return flips_df.to_dict(orient="records")
+
+
+def get_balance_of_power_summary(df: pd.DataFrame) -> dict:
+    """
+    Compute 100-seat balance of power summary metrics for the Majority Bar.
+    
+    Returns breakdown across:
+    - safe_dem_ind: 34 seats (32 DEM + 2 IND)
+    - dem_holds: 9 seats
+    - dem_flips: 6 seats (from GOP)
+    - unpolled: 5 seats (3 DEM incumbent, 2 REP incumbent)
+    - rep_flips: 1 seat (from DEM)
+    - rep_holds: 14 seats
+    - safe_rep: 31 seats
+    - projected_dem_total: 52 seats
+    - projected_rep_total: 48 seats
+    - net_dem_gain: 5 seats
+    """
+    safe_seats = df[~df["is_contested_2026"]]
+    contested_seats = df[df["is_contested_2026"]]
+
+    safe_dem_ind = len(safe_seats[safe_seats["party"].isin(["DEM", "IND"])])
+    safe_rep = len(safe_seats[safe_seats["party"] == "REP"])
+
+    dem_holds = len(contested_seats[(contested_seats["party"] == "DEM") & (contested_seats["poll_leader"] == "DEM")])
+    rep_holds = len(contested_seats[(contested_seats["party"] == "REP") & (contested_seats["poll_leader"] == "REP")])
+
+    dem_flips = len(contested_seats[contested_seats["flip_type"] == "REP_TO_DEM"])
+    rep_flips = len(contested_seats[contested_seats["flip_type"] == "DEM_TO_REP"])
+
+    unpolled = len(contested_seats[contested_seats["poll_leader"] == "NO_DATA"])
+    unpolled_dem = len(contested_seats[(contested_seats["poll_leader"] == "NO_DATA") & (contested_seats["party"] == "DEM")])
+    unpolled_rep = len(contested_seats[(contested_seats["poll_leader"] == "NO_DATA") & (contested_seats["party"] == "REP")])
+
+    projected_dem = safe_dem_ind + dem_holds + dem_flips + unpolled_dem
+    projected_rep = safe_rep + rep_holds + rep_flips + unpolled_rep
+
+    return {
+        "safe_dem_ind": safe_dem_ind,
+        "dem_holds": dem_holds,
+        "dem_flips": dem_flips,
+        "unpolled": unpolled,
+        "unpolled_dem": unpolled_dem,
+        "unpolled_rep": unpolled_rep,
+        "rep_flips": rep_flips,
+        "rep_holds": rep_holds,
+        "safe_rep": safe_rep,
+        "projected_dem_total": projected_dem,
+        "projected_rep_total": projected_rep,
+        "net_dem_gain": dem_flips - rep_flips,
+    }
+
+
 if __name__ == "__main__":
     df = load_all_senators_data()
     print(f"Loaded {len(df)} senator half-state records.")
-    print("Combined categories distribution:")
-    print(df["cat_combined"].value_counts())
+    summary = get_balance_of_power_summary(df)
+    print("Balance of power summary:", summary)
+    flips = get_flip_records(df)
+    print(f"Flips ({len(flips)}):", [(f['state'], f['party'], '->', f['poll_leader'], f['poll_margin']) for f in flips])
+
