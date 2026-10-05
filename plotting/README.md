@@ -9,7 +9,7 @@ A static, publication-grade data visualization communicating the 2026 US Senate 
 - **`app.py`**: Streamlit application entry point. Coordinates layout, query parameters, sidebar controls, and the embedded client-side dashboard component.
 - **`map_builder.py`**: Constructs the synchronized client-side dashboard:
   - 50-state Albers split map (100 half-state polygons representing individual Senate seats).
-  - Dashed white border overlays around all 35 seats up for election in 2026.
+  - Diagonal hatch texture pattern (///) with crisp white border overlays around all 35 seats up for election in 2026.
   - Circular transfer badges (`⇄`) marking battleground seats projected to flip party control.
   - 50-Seat Majority Threshold Bar (0 to 100 seats) and 7-seat battleground flip ledger.
 - **`state_centroids.py`**: Geographical configuration containing:

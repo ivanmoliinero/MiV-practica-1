@@ -575,6 +575,9 @@ def build_interactive_dashboard_html(
     .scattergeo .point path {{
       filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.75)) !important;
     }}
+    .contested-seat-overlay {{
+      pointer-events: none !important;
+    }}
   </style>
 </head>
 <body>
@@ -753,12 +756,57 @@ def build_interactive_dashboard_html(
 
     Plotly.newPlot('map-container', [mapTraceHalves, mapTraceOutlines, mapTraceText, mapTraceFlips], mapLayout, {{ responsive: true, displayModeBar: false }});
 
-    // Dedicated top-level overlay layer for contested seats' dashed borders (visible over both black and white borders)
+    // Dedicated top-level overlay layer for contested seats with diagonal hatch pattern and crisp border
     function updateContestedOverlay() {{
       const choroplethGroup = document.querySelector('#map-container .choropleth') || 
                               document.querySelector('#map-container .geolayer');
       if (!choroplethGroup) return;
 
+      // 1. Inject SVG pattern definition for diagonal hatching
+      let defs = document.getElementById('map-defs');
+      if (!defs) {{
+        const svgRoot = document.querySelector('#map-container svg');
+        if (svgRoot) {{
+          defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+          defs.setAttribute('id', 'map-defs');
+          svgRoot.insertBefore(defs, svgRoot.firstChild);
+        }}
+      }}
+
+      if (defs && !document.getElementById('contested-hatch-pattern')) {{
+        const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+        pattern.setAttribute('id', 'contested-hatch-pattern');
+        pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+        pattern.setAttribute('width', '8');
+        pattern.setAttribute('height', '8');
+        pattern.setAttribute('patternTransform', 'rotate(45)');
+
+        // Background shadow line for contrast on light colors
+        const darkLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        darkLine.setAttribute('x1', '4');
+        darkLine.setAttribute('y1', '0');
+        darkLine.setAttribute('x2', '4');
+        darkLine.setAttribute('y2', '8');
+        darkLine.setAttribute('stroke', '#000000');
+        darkLine.setAttribute('stroke-width', '2.2');
+        darkLine.setAttribute('stroke-opacity', '0.35');
+        pattern.appendChild(darkLine);
+
+        // Foreground crisp white line
+        const whiteLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        whiteLine.setAttribute('x1', '4');
+        whiteLine.setAttribute('y1', '0');
+        whiteLine.setAttribute('x2', '4');
+        whiteLine.setAttribute('y2', '8');
+        whiteLine.setAttribute('stroke', '#FFFFFF');
+        whiteLine.setAttribute('stroke-width', '1.4');
+        whiteLine.setAttribute('stroke-opacity', '0.75');
+        pattern.appendChild(whiteLine);
+
+        defs.appendChild(pattern);
+      }}
+
+      // 2. Setup or retrieve overlay container
       let overlayGroup = document.getElementById('contested-stroke-overlay');
       if (!overlayGroup) {{
         overlayGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -767,7 +815,7 @@ def build_interactive_dashboard_html(
         choroplethGroup.appendChild(overlayGroup);
       }}
 
-      // Populate overlay paths
+      // 3. Populate overlay paths with diagonal hatch fill and crisp white boundary
       if (overlayGroup.children.length === 0) {{
         const allPaths = document.querySelectorAll('#map-container path.choroplethlocation');
         const numHalves = Math.min(locs.length, allPaths.length);
@@ -784,13 +832,13 @@ def build_interactive_dashboard_html(
           if (contestedSet.has(loc)) {{
             const overlayPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             overlayPath.setAttribute('d', p.getAttribute('d'));
-            overlayPath.setAttribute('class', 'contested-seat-border');
-            overlayPath.style.fill = 'none';
+            overlayPath.setAttribute('class', 'contested-seat-overlay');
+            overlayPath.style.fill = 'url(#contested-hatch-pattern)';
             overlayPath.style.stroke = '#FFFFFF';
-            overlayPath.style.strokeWidth = '2.6px';
-            overlayPath.style.strokeDasharray = '5, 3.5';
+            overlayPath.style.strokeWidth = '2.2px';
             overlayPath.style.strokeLinecap = 'round';
-            overlayPath.style.filter = 'drop-shadow(0 0 1.2px #000000) drop-shadow(0 0 2px rgba(255, 255, 255, 0.5))';
+            overlayPath.style.strokeLinejoin = 'round';
+            overlayPath.style.filter = 'drop-shadow(0 0 1.5px rgba(0, 0, 0, 0.75))';
             overlayPath.style.pointerEvents = 'none';
             overlayGroup.appendChild(overlayPath);
           }}
@@ -814,7 +862,14 @@ def build_interactive_dashboard_html(
       }}
     }}
 
-    // Initialize stroke hierarchy and text layers on load
+    // Initialize stroke hierarchy and text layers on load and after any plot redraw
+    const mapDiv = document.getElementById('map-container');
+    if (mapDiv && mapDiv.on) {{
+      mapDiv.on('plotly_afterplot', () => {{
+        updateContestedOverlay();
+        bringTextToFront();
+      }});
+    }}
     setTimeout(() => {{
       updateContestedOverlay();
       bringTextToFront();

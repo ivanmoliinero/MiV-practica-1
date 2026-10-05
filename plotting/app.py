@@ -144,7 +144,7 @@ def main() -> None:
                 <b>🏛️ Representation & Seat Flips (2 Senators per State):</b><br>
                 • <b>Outer Black Border:</b> Clearly separates each of the 50 US states.<br>
                 • <b>Inner White Line:</b> Divides each state into its two Senate seats (West = Safe, East = 2026 Race).<br>
-                • <b>Contested Races Border:</b> All 35 seats up for election in 2026 are highlighted with a crisp dashed white border.<br>
+                • <b>Contested Races Texture (35 Seats):</b> All 35 seats up for election in 2026 are highlighted with a diagonal hatch texture pattern (///) and crisp white border over their projected party color.<br>
                 • <b>⇄ Transfer Badges (Style 2):</b> Bold circular badges mark the 7 battlegrounds projecting a party flip:<br>
                   &nbsp;&nbsp;🔵 <b>Blue Badge (⇄):</b> Republican seat flipping to Democrat (AK, KY, ME, NE, NC, OH).<br>
                   &nbsp;&nbsp;🔴 <b>Red Badge (⇄):</b> Democratic seat flipping to Republican (MI).<br>
