@@ -447,13 +447,6 @@ def build_interactive_dashboard_html(
     .pill-right {{
       background-color: #DC2626;
       color: #FFFFFF;
-      background-image: repeating-linear-gradient(
-        45deg,
-        transparent,
-        transparent 3px,
-        rgba(255, 255, 255, 0.35) 3px,
-        rgba(255, 255, 255, 0.35) 5px
-      );
     }}
     .legend-divider {{
       width: 1px;
@@ -704,8 +697,8 @@ def build_interactive_dashboard_html(
       <div id="map-legend-bar">
         <div class="legend-row">
           <span class="structure-pill">
-            <span class="pill-half pill-left">Safe Seat</span>
-            <span class="pill-half pill-right">2026 Seat Race</span>
+            <span class="pill-half pill-left">Senate Seat 1</span>
+            <span class="pill-half pill-right">Senate Seat 2</span>
           </span>
           <div class="legend-divider"></div>
           <div class="legend-item">
