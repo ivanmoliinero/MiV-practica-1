@@ -41,6 +41,8 @@
       heatmapZ,
       heatmapColorscale,
       heatmapTooltips,
+      heatmapStateZ,
+      heatmapStateTooltips,
       heatmapZmin,
       heatmapZmax,
       legendColorsCombinedHtml,
@@ -132,13 +134,16 @@
       },
     };
 
+    const outlineTransparentColorscale = [[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0)']];
+    const outlineZeros = new Array(stateNames.length).fill(0);
+
     const mapTraceOutlines = {
       type: 'choropleth',
       geojson: outlinesGeojson,
       locations: stateNames,
       featureidkey: 'id',
-      z: new Array(stateNames.length).fill(0),
-      colorscale: [[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0)']],
+      z: outlineZeros,
+      colorscale: outlineTransparentColorscale,
       showscale: false,
       hoverinfo: 'skip',
       marker: {
@@ -392,6 +397,15 @@
     // Wire in-map client-side filter toggle
     const filterCheckbox = document.getElementById('client-filter-toggle');
     const heatmapCheckbox = document.getElementById('heatmap-toggle');
+    const legendBar = document.getElementById('map-legend-bar');
+
+    // Always reset heatmap toggle on page load to prevent stale browser form restore
+    if (heatmapCheckbox) {
+      heatmapCheckbox.checked = false;
+    }
+    if (legendBar) {
+      legendBar.classList.remove('heatmap-mode');
+    }
 
     if (filterCheckbox) {
       if (isFilterActive) {
@@ -426,35 +440,66 @@
         const isHeatmap = e.target.checked;
 
         if (isHeatmap) {
+          if (legendBar) legendBar.classList.add('heatmap-mode');
           clearContestedStyles();
           if (filterCheckbox) filterCheckbox.disabled = true;
 
-          Plotly.restyle('map-plot', {
-            z: [heatmapZ],
-            colorscale: [heatmapColorscale],
-            zmin: heatmapZmin,
-            zmax: heatmapZmax,
-            hovertext: [heatmapTooltips],
-          }, [0]).then(() => {
-            clearContestedStyles();
-          });
+          // 1. Hide split-halves trace 0 to eliminate any middle seam
+          // 2. Color whole-state outlines trace 1 with continuous heatmap data
+          // 3. Mute flip markers trace 3
+          Plotly.restyle('map-plot', { visible: false }, [0])
+            .then(() => {
+              return Plotly.restyle('map-plot', {
+                z: [heatmapStateZ],
+                colorscale: [heatmapColorscale],
+                zmin: heatmapZmin,
+                zmax: heatmapZmax,
+                hovertext: [heatmapStateTooltips],
+                hoverinfo: 'text',
+                'marker.line.color': '#000000',
+                'marker.line.width': 1.5,
+              }, [1]);
+            })
+            .then(() => {
+              return Plotly.restyle('map-plot', { visible: false }, [3]);
+            });
 
           if (legendColorsContainer) {
             legendColorsContainer.innerHTML = legendColorsHeatmapHtml;
           }
         } else {
+          if (legendBar) legendBar.classList.remove('heatmap-mode');
           if (filterCheckbox) filterCheckbox.disabled = false;
           const targetZ = (filterCheckbox && filterCheckbox.checked) ? pollsZOnly : pollsZCombined;
 
+          // 1. Reset whole-state trace 1 back to transparent outlines
+          // 2. Restore split-halves trace 0 with categorical data and white inner seat borders
+          // 3. Restore flip markers trace 3
           Plotly.restyle('map-plot', {
-            z: [targetZ],
-            colorscale: [normalColorscale],
-            zmin: normalZmin,
-            zmax: normalZmax,
-            hovertext: [tooltips],
-          }, [0]).then(() => {
-            applyContestedStyles();
-          });
+            z: [outlineZeros],
+            colorscale: [outlineTransparentColorscale],
+            hoverinfo: 'skip',
+            'marker.line.color': '#000000',
+            'marker.line.width': 2.0,
+          }, [1])
+            .then(() => {
+              return Plotly.restyle('map-plot', {
+                z: [targetZ],
+                colorscale: [normalColorscale],
+                zmin: normalZmin,
+                zmax: normalZmax,
+                hovertext: [tooltips],
+                visible: true,
+                'marker.line.width': 1.5,
+                'marker.line.color': '#FFFFFF',
+              }, [0]);
+            })
+            .then(() => {
+              return Plotly.restyle('map-plot', { visible: true }, [3]);
+            })
+            .then(() => {
+              applyContestedStyles();
+            });
 
           if (legendColorsContainer) {
             legendColorsContainer.innerHTML = (filterCheckbox && filterCheckbox.checked)

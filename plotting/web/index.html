@@ -81,31 +81,36 @@
             <span class="pill-half pill-right">Senate Seat 2</span>
           </span>
           <div class="legend-divider"></div>
-          <div class="legend-item">
+          <div class="legend-item legend-item-categorical">
             <span class="legend-swatch-pair">
               <span class="legend-swatch-hatch hatch-dem"></span>
               <span class="legend-swatch-hatch hatch-rep"></span>
             </span>
             <span>2026 Race in Play</span>
           </div>
-          <div class="legend-item">
+          <div class="legend-item legend-item-categorical">
             <span class="legend-swatch-pair">
               <span class="legend-swatch-flip flip-dem">⇄</span>
               <span class="legend-swatch-flip flip-rep">⇄</span>
             </span>
             <span>Projected Party Flip</span>
           </div>
+          <div class="heatmap-mode-indicator">
+            <span class="heatmap-mode-tag">Voter Heatmap</span>
+            <span>Population & Turnout Weight Scale</span>
+          </div>
           <div class="legend-controls-group">
             <button id="reset-zoom-btn" class="map-control-btn" title="Reset map zoom and pan back to full USA view">
               <span style="font-size: 0.85rem;">↺</span> Reset Zoom
             </button>
-            <label class="filter-toggle-control" title="Toggle between All Seats and 2026 Contested Races Only">
-              <input type="checkbox" id="client-filter-toggle" />
+            <label class="map-control-toggle filter-seats-toggle"
+              title="Toggle between All Seats and 2026 Contested Races Only">
+              <input type="checkbox" id="client-filter-toggle" autocomplete="off" />
               <span>Filter: 2026 Races in Play Only</span>
             </label>
-            <label class="filter-toggle-control heatmap-toggle-control"
+            <label class="map-control-toggle heatmap-view-toggle"
               title="Show voter-weighted heatmap (absolute estimated voters per candidate)">
-              <input type="checkbox" id="heatmap-toggle" />
+              <input type="checkbox" id="heatmap-toggle" autocomplete="off" />
               <span>Voter Weight Heatmap</span>
             </label>
           </div>

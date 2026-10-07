@@ -103,68 +103,159 @@ def export_all() -> None:
         colorscale_items.append([i / k, color])
         colorscale_items.append([(i + 1) / k, color])
 
-    # Voter-weight heatmap calculation
+    # Map each state to its 2026 contested race data (if any)
+    contested_by_state = {}
+    for _, row in df[df["is_contested_2026"]].iterrows():
+        contested_by_state[row["state"]] = row
+
     heatmap_z = []
     heatmap_tooltips = []
     dem_weights = []
     rep_weights = []
 
-    for _, row in df.iterrows():
-        leader = row.get("poll_leader")
-        dem_w = row.get("dem_voter_weight")
-        rep_w = row.get("rep_voter_weight")
-        is_cont = row.get("is_contested_2026", False)
-        state_name = row["state"]
-        side_lbl = "Senate Seat 1" if row["side"] == "left" else "Senate Seat 2"
-        senator_name = row.get("senator_name", "")
-        party_name = row.get("party", "")
-        vep_val = STATE_VEP.get(state_name, 0)
+    # Calculate voter weights per contested state
+    for state_name, cont_row in contested_by_state.items():
+        leader = cont_row.get("poll_leader")
+        dem_w = cont_row.get("dem_voter_weight")
+        rep_w = cont_row.get("rep_voter_weight")
+        if dem_w and leader == "DEM":
+            dem_weights.append(float(dem_w))
+        elif rep_w and leader == "REP":
+            rep_weights.append(float(rep_w))
 
-        if is_cont and dem_w and leader == "DEM":
-            w = float(dem_w)
-            dem_weights.append(w)
-            heatmap_z.append(w)
-            pct = (w / vep_val * 100.0) if vep_val else 0.0
-            margin = row.get("poll_margin")
-            margin_str = f"DEM +{margin:.1f} pp" if margin is not None else "Projected DEM Lead"
-            tip_html = (
-                f"<b>🏛️ {state_name} ({side_lbl}) — 2026 Voter Weight</b><br>"
-                f"─────────────────────────────<br>"
-                f"<b>Projected Winner:</b> Democrat ({margin_str})<br>"
-                f"<b>👥 Estimated Supporters:</b> ~{int(w):,d} voters<br>"
-                f"<b>State Eligible Population (VEP):</b> {vep_val:,d}<br>"
-                f"<b>Projected Vote Share:</b> {pct:.1f}%<br>"
-                f"─────────────────────────────<br>"
-                f"<i>Formula: 2024 VEP (UF Election Lab) × Polling %</i>"
-            )
-            heatmap_tooltips.append(tip_html)
-        elif is_cont and rep_w and leader == "REP":
-            w = float(rep_w)
-            rep_weights.append(w)
-            heatmap_z.append(-w)
-            pct = (w / vep_val * 100.0) if vep_val else 0.0
-            margin = row.get("poll_margin")
-            margin_str = f"REP +{abs(margin):.1f} pp" if margin is not None else "Projected REP Lead"
-            tip_html = (
-                f"<b>🏛️ {state_name} ({side_lbl}) — 2026 Voter Weight</b><br>"
-                f"─────────────────────────────<br>"
-                f"<b>Projected Winner:</b> Republican ({margin_str})<br>"
-                f"<b>👥 Estimated Supporters:</b> ~{int(w):,d} voters<br>"
-                f"<b>State Eligible Population (VEP):</b> {vep_val:,d}<br>"
-                f"<b>Projected Vote Share:</b> {pct:.1f}%<br>"
-                f"─────────────────────────────<br>"
-                f"<i>Formula: 2024 VEP (UF Election Lab) × Polling %</i>"
-            )
-            heatmap_tooltips.append(tip_html)
+    # Paint the entire state (both halves) with the state's 2026 voter weight
+    for _, row in df.iterrows():
+        state_name = row["state"]
+        vep_val = STATE_VEP.get(state_name, 0)
+        cont_row = contested_by_state.get(state_name)
+
+        if cont_row is not None:
+            leader = cont_row.get("poll_leader")
+            dem_w = cont_row.get("dem_voter_weight")
+            rep_w = cont_row.get("rep_voter_weight")
+            senator_name = cont_row.get("senator_name", "")
+            party_name = cont_row.get("party", "")
+
+            if dem_w and leader == "DEM":
+                w = float(dem_w)
+                heatmap_z.append(w)
+                pct = (w / vep_val * 100.0) if vep_val else 0.0
+                margin = cont_row.get("poll_margin")
+                margin_str = f"DEM +{margin:.1f} pp" if margin is not None else "Projected DEM Lead"
+                tip_html = (
+                    f"<b>🏛️ {state_name} — 2026 Voter Weight</b><br>"
+                    f"─────────────────────────────<br>"
+                    f"<b>Projected Winner:</b> Democrat ({margin_str})<br>"
+                    f"<b>👥 Estimated Supporters:</b> ~{int(w):,d} voters<br>"
+                    f"<b>State Eligible Population (VEP):</b> {vep_val:,d}<br>"
+                    f"<b>Projected Vote Share:</b> {pct:.1f}%<br>"
+                    f"<b>Contested Seat:</b> {senator_name} ({party_name})<br>"
+                    f"─────────────────────────────<br>"
+                    f"<i>Formula: 2024 VEP (UF Election Lab) × Polling %</i>"
+                )
+                heatmap_tooltips.append(tip_html)
+            elif rep_w and leader == "REP":
+                w = float(rep_w)
+                heatmap_z.append(-w)
+                pct = (w / vep_val * 100.0) if vep_val else 0.0
+                margin = cont_row.get("poll_margin")
+                margin_str = f"REP +{abs(margin):.1f} pp" if margin is not None else "Projected REP Lead"
+                tip_html = (
+                    f"<b>🏛️ {state_name} — 2026 Voter Weight</b><br>"
+                    f"─────────────────────────────<br>"
+                    f"<b>Projected Winner:</b> Republican ({margin_str})<br>"
+                    f"<b>👥 Estimated Supporters:</b> ~{int(w):,d} voters<br>"
+                    f"<b>State Eligible Population (VEP):</b> {vep_val:,d}<br>"
+                    f"<b>Projected Vote Share:</b> {pct:.1f}%<br>"
+                    f"<b>Contested Seat:</b> {senator_name} ({party_name})<br>"
+                    f"─────────────────────────────<br>"
+                    f"<i>Formula: 2024 VEP (UF Election Lab) × Polling %</i>"
+                )
+                heatmap_tooltips.append(tip_html)
+            else:
+                heatmap_z.append(0.0)
+                tip_html = (
+                    f"<b>🏛️ {state_name}</b><br>"
+                    f"─────────────────────────────<br>"
+                    f"🔒 <b>Safe State:</b> No Senate election in 2026"
+                )
+                heatmap_tooltips.append(tip_html)
         else:
             heatmap_z.append(0.0)
             tip_html = (
-                f"<b>🏛️ {state_name} ({side_lbl})</b><br>"
+                f"<b>🏛️ {state_name}</b><br>"
                 f"─────────────────────────────<br>"
-                f"<b>Senator:</b> {senator_name} ({party_name})<br>"
-                f"🔒 <b>Safe Seat:</b> Not up for election in 2026"
+                f"🔒 <b>Safe State:</b> No Senate election in 2026"
             )
             heatmap_tooltips.append(tip_html)
+
+    # Build 50-state voter-weight dataset for seamless whole-state heatmap visualization
+    heatmap_state_z = []
+    heatmap_state_tooltips = []
+
+    for s_name in state_names:
+        vep_val = STATE_VEP.get(s_name, 0)
+        cont_row = contested_by_state.get(s_name)
+
+        if cont_row is not None:
+            leader = cont_row.get("poll_leader")
+            dem_w = cont_row.get("dem_voter_weight")
+            rep_w = cont_row.get("rep_voter_weight")
+            senator_name = cont_row.get("senator_name", "")
+            party_name = cont_row.get("party", "")
+
+            if dem_w and leader == "DEM":
+                w = float(dem_w)
+                heatmap_state_z.append(w)
+                pct = (w / vep_val * 100.0) if vep_val else 0.0
+                margin = cont_row.get("poll_margin")
+                margin_str = f"DEM +{margin:.1f} pp" if margin is not None else "Projected DEM Lead"
+                tip_html = (
+                    f"<b>🏛️ {s_name} — 2026 Voter Weight</b><br>"
+                    f"─────────────────────────────<br>"
+                    f"<b>Projected Winner:</b> Democrat ({margin_str})<br>"
+                    f"<b>👥 Estimated Supporters:</b> ~{int(w):,d} voters<br>"
+                    f"<b>State Eligible Population (VEP):</b> {vep_val:,d}<br>"
+                    f"<b>Projected Vote Share:</b> {pct:.1f}%<br>"
+                    f"<b>Contested Seat:</b> {senator_name} ({party_name})<br>"
+                    f"─────────────────────────────<br>"
+                    f"<i>Formula: 2024 VEP (UF Election Lab) × Polling %</i>"
+                )
+                heatmap_state_tooltips.append(tip_html)
+            elif rep_w and leader == "REP":
+                w = float(rep_w)
+                heatmap_state_z.append(-w)
+                pct = (w / vep_val * 100.0) if vep_val else 0.0
+                margin = cont_row.get("poll_margin")
+                margin_str = f"REP +{abs(margin):.1f} pp" if margin is not None else "Projected REP Lead"
+                tip_html = (
+                    f"<b>🏛️ {s_name} — 2026 Voter Weight</b><br>"
+                    f"─────────────────────────────<br>"
+                    f"<b>Projected Winner:</b> Republican ({margin_str})<br>"
+                    f"<b>👥 Estimated Supporters:</b> ~{int(w):,d} voters<br>"
+                    f"<b>State Eligible Population (VEP):</b> {vep_val:,d}<br>"
+                    f"<b>Projected Vote Share:</b> {pct:.1f}%<br>"
+                    f"<b>Contested Seat:</b> {senator_name} ({party_name})<br>"
+                    f"─────────────────────────────<br>"
+                    f"<i>Formula: 2024 VEP (UF Election Lab) × Polling %</i>"
+                )
+                heatmap_state_tooltips.append(tip_html)
+            else:
+                heatmap_state_z.append(0.0)
+                tip_html = (
+                    f"<b>🏛️ {s_name}</b><br>"
+                    f"─────────────────────────────<br>"
+                    f"🔒 <b>Safe State:</b> No Senate election in 2026"
+                )
+                heatmap_state_tooltips.append(tip_html)
+        else:
+            heatmap_state_z.append(0.0)
+            tip_html = (
+                f"<b>🏛️ {s_name}</b><br>"
+                f"─────────────────────────────<br>"
+                f"🔒 <b>Safe State:</b> No Senate election in 2026"
+            )
+            heatmap_state_tooltips.append(tip_html)
 
     max_voter_weight = max(
         max(dem_weights) if dem_weights else 1.0,
@@ -216,21 +307,66 @@ def export_all() -> None:
           <div class="legend-item"><span class="legend-swatch" style="background:#1E293B; border: 1px solid #475569;"></span> <span>Safe / Muted (65 seats)</span></div>
     """
 
+    max_lbl = f"{max_voter_weight / 1_000_000:.1f}M"
+    mid2_lbl = f"{round(max_voter_weight * 0.64024 / 1_000_000):.0f}M"
+    mid1_lbl = f"{round(max_voter_weight * 0.32012 / 1_000_000):.0f}M"
+
     legend_colors_heatmap_html = f"""
-          <div class="legend-item">
-            <span class="legend-gradient-bar" style="background: linear-gradient(to right, #DBEAFE, #3B82F6, #1E3A8A);"></span>
-            <span><b>DEM:</b> {dem_min_lbl} (light) → {dem_max_lbl} (deep)</span>
-          </div>
-          <div class="legend-item">
-            <span class="legend-gradient-bar" style="background: linear-gradient(to right, #FEE2E2, #DC2626, #7F1D1D);"></span>
-            <span><b>REP:</b> {rep_min_lbl} (light) → {rep_max_lbl} (deep)</span>
-          </div>
-          <div class="legend-item">
-            <span class="legend-swatch" style="background: #1E293B; border: 1px solid #475569;"></span>
-            <span>Uncontested / Safe Seat</span>
-          </div>
-          <div class="legend-item" style="font-size: 0.68rem; color: #94A3B8; font-style: italic;">
-            Estimated = State VEP (UF Election Lab) × Polling %
+          <div class="heatmap-legend-wrapper">
+            <div class="heatmap-legend-header">
+              <div class="heatmap-legend-party-rep">
+                <span class="party-indicator-dot dot-rep"></span>
+                <span><b>REP</b> Estimated Supporters (0 → ~{max_lbl})</span>
+              </div>
+              <div class="heatmap-legend-center-info">
+                <span class="party-indicator-dot dot-safe"></span>
+                <span>Uncontested / Safe Seat (0)</span>
+              </div>
+              <div class="heatmap-legend-party-dem">
+                <span><b>DEM</b> Estimated Supporters (0 → ~{max_lbl})</span>
+                <span class="party-indicator-dot dot-dem"></span>
+              </div>
+            </div>
+
+            <div class="heatmap-bar-container">
+              <div class="heatmap-continuous-bar"></div>
+              <div class="heatmap-ticks-track">
+                <div class="heatmap-tick" style="left: 0%;">
+                  <div class="tick-pip"></div>
+                  <span class="tick-val">{max_lbl}</span>
+                </div>
+                <div class="heatmap-tick" style="left: 18%;">
+                  <div class="tick-pip"></div>
+                  <span class="tick-val">{mid2_lbl}</span>
+                </div>
+                <div class="heatmap-tick" style="left: 34%;">
+                  <div class="tick-pip"></div>
+                  <span class="tick-val">{mid1_lbl}</span>
+                </div>
+                <div class="heatmap-tick tick-center" style="left: 50%;">
+                  <div class="tick-pip tick-pip-center"></div>
+                  <span class="tick-val tick-val-center">0</span>
+                </div>
+                <div class="heatmap-tick" style="left: 66%;">
+                  <div class="tick-pip"></div>
+                  <span class="tick-val">{mid1_lbl}</span>
+                </div>
+                <div class="heatmap-tick" style="left: 82%;">
+                  <div class="tick-pip"></div>
+                  <span class="tick-val">{mid2_lbl}</span>
+                </div>
+                <div class="heatmap-tick" style="left: 100%;">
+                  <div class="tick-pip"></div>
+                  <span class="tick-val">{max_lbl}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="heatmap-subtext-bar">
+              <div class="heatmap-subtext-formula" style="margin-left: auto;">
+                Formula: 2024 VEP (UF Election Lab) × Polling %
+              </div>
+            </div>
           </div>
     """
 
@@ -257,6 +393,8 @@ def export_all() -> None:
         "heatmapZ": heatmap_z,
         "heatmapColorscale": heatmap_colorscale,
         "heatmapTooltips": heatmap_tooltips,
+        "heatmapStateZ": heatmap_state_z,
+        "heatmapStateTooltips": heatmap_state_tooltips,
         "heatmapZmin": -round(max_voter_weight),
         "heatmapZmax": round(max_voter_weight),
         "legendColorsCombinedHtml": legend_colors_combined_html,
