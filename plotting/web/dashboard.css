@@ -8,7 +8,7 @@ html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background: transparent;
+  background: #020617;
   color: #F8FAFC;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
@@ -19,6 +19,31 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 8px;
+  background: #020617;
+}
+
+.dashboard-header {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 4px;
+}
+
+.dashboard-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #F8FAFC;
+}
+
+.dashboard-subtitle {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #94A3B8;
+  font-weight: 500;
 }
 
 #map-container {
@@ -194,6 +219,7 @@ html, body {
   border-color: #64748B;
 }
 
+.map-control-toggle,
 .filter-toggle-control {
   background: #1E293B;
   border: 1px solid #334155;
@@ -210,11 +236,13 @@ html, body {
   transition: all 0.2s ease;
 }
 
+.map-control-toggle:hover,
 .filter-toggle-control:hover {
   border-color: #38BDF8;
   background: #0F172A;
 }
 
+.map-control-toggle input[type="checkbox"],
 .filter-toggle-control input[type="checkbox"] {
   cursor: pointer;
   accent-color: #38BDF8;
@@ -459,12 +487,234 @@ path.choroplethlocation.hatch-tie {
   fill: url(#hatch-tie) !important;
 }
 
-/* Voter-weight heatmap legend gradient bar */
-.legend-gradient-bar {
-  width: 58px;
-  height: 12px;
-  border-radius: 3px;
-  display: inline-block;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+/* Heatmap Active Mode State */
+#map-legend-bar.heatmap-mode .structure-pill,
+#map-legend-bar.heatmap-mode .legend-item-categorical,
+#map-legend-bar.heatmap-mode .legend-divider {
+  display: none !important;
+}
+
+/* Disable ONLY the contested-race filter toggle when heatmap is active */
+#map-legend-bar.heatmap-mode .filter-seats-toggle {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Ensure the heatmap toggle is ALWAYS clickable and highlighted when active */
+.heatmap-view-toggle {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+#map-legend-bar.heatmap-mode .heatmap-view-toggle {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: #38BDF8;
+  color: #38BDF8;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.heatmap-mode-indicator {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.70rem;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+#map-legend-bar.heatmap-mode .heatmap-mode-indicator {
+  display: inline-flex;
+}
+
+.heatmap-mode-tag {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38BDF8;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Voter-weight heatmap unified continuous diverging scale */
+.heatmap-legend-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 2px 0 1px 0;
+}
+
+.heatmap-legend-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.70rem;
+  font-weight: 600;
+  color: #CBD5E1;
+}
+
+.heatmap-legend-party-rep {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #F87171;
+}
+
+.heatmap-legend-party-dem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #60A5FA;
+}
+
+.heatmap-legend-center-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #94A3B8;
+  font-size: 0.68rem;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid #334155;
+  padding: 1px 8px;
+  border-radius: 10px;
+}
+
+.party-indicator-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
   flex-shrink: 0;
 }
+
+.party-indicator-dot.dot-rep {
+  background: #EF4444;
+  box-shadow: 0 0 5px rgba(239, 68, 68, 0.6);
+}
+
+.party-indicator-dot.dot-dem {
+  background: #3B82F6;
+  box-shadow: 0 0 5px rgba(59, 130, 246, 0.6);
+}
+
+.party-indicator-dot.dot-safe {
+  background: #1E293B;
+  border: 1px solid #64748B;
+}
+
+.heatmap-bar-container {
+  position: relative;
+  width: 100%;
+  padding-bottom: 16px;
+}
+
+.heatmap-continuous-bar {
+  width: 100%;
+  height: 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(
+    to right,
+    #7F1D1D 0%,
+    #991B1B 20%,
+    #DC2626 35%,
+    #FCA5A5 45%,
+    #FEE2E2 48.8%,
+    #1E293B 49.5%,
+    #1E293B 50.5%,
+    #DBEAFE 51.2%,
+    #93C5FD 55%,
+    #3B82F6 65%,
+    #2563EB 80%,
+    #1E3A8A 100%
+  );
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.heatmap-ticks-track {
+  position: absolute;
+  top: 12px;
+  left: 0;
+  width: 100%;
+  height: 16px;
+}
+
+.heatmap-tick {
+  position: absolute;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.heatmap-tick:first-child {
+  transform: translateX(0);
+  align-items: flex-start;
+}
+
+.heatmap-tick:last-child {
+  transform: translateX(-100%);
+  align-items: flex-end;
+}
+
+.tick-pip {
+  width: 1px;
+  height: 4px;
+  background: #64748B;
+  margin-bottom: 2px;
+}
+
+.tick-pip-center {
+  background: #94A3B8;
+  height: 5px;
+}
+
+.tick-val {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #94A3B8;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.tick-val-center {
+  color: #F1F5F9;
+}
+
+.heatmap-subtext-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.66rem;
+  color: #64748B;
+  margin-top: -2px;
+}
+
+.heatmap-subtext-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.heatmap-subtext-badge {
+  background: rgba(148, 163, 184, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #94A3B8;
+  font-size: 0.60rem;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.heatmap-subtext-formula {
+  font-style: italic;
+  color: #64748B;
+}
+

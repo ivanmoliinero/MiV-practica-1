@@ -8,9 +8,31 @@ Aquest plot presenta diversos problemes comentats a la documentació de la pràc
 ## Correccions
 En aquest codi es troba tot el codi per adquisició, preprocessament i disposició de dades finals en un plot corregit. Els detalls dels preprocessaments, les decisions de disseny del nou plot i implementació de la interactivitat queden en la documentació de la pràctica.
 
-## Set-up
-L'aplicació funciona en Python. Hi ha 2 directoris:
-- data-fetching: Projecte per obtenir les dades de la Wikipedia sobre informació actual i enquestes sobre el senat dels EUA.
-- plotting: Projecte per crear la nova visualització.
+## Set-up i Execució
 
-En ambós casos, s'inclou un fitxer `requirements.txt` per fer el set-up de les dependències. Recomanem l'eina `uv` per crear entorns virtuals.
+El projecte està estructurat en dos directoris:
+- **`data-fetching`**: Scripts per obtenir les dades oficials i d'enquestes sobre el Senat dels EUA i el cens electoral (VEP).
+- **`plotting`**: Preprocessament i visualització web interactiva.
+
+### 1. Dependències de Python
+Recomanem utilitzar un entorn virtual (per exemple amb `uv` o `venv`):
+```bash
+uv pip install -r plotting/requirements.txt
+# o bé:
+pip install -r plotting/requirements.txt
+```
+
+### 2. Generació de Dades per a la Visualització
+Per preprocessar les dades de les enquestes i generar els actius estàtics:
+```bash
+python plotting/export_data.py
+```
+*(Opcional: Si es volen regenerar els polígons GeoJSON partits dels 50 estats des de zero, es pot executar `python plotting/geo_splitter.py`).*
+
+### 3. Servidor Local (Sense dependència de Node.js)
+Per visualitzar el dashboard en local sense dependències externes per la complexitat d'aquesta pràctica, utilitzem el servidor HTTP natiu de Python:
+```bash
+python3 -m http.server 8000 --directory plotting/web
+```
+Un cop iniciat, obre el navegador a:
+**http://localhost:8000**
