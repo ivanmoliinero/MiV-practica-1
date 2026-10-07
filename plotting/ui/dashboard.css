@@ -1,0 +1,470 @@
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+  color: #F8FAFC;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.dashboard-layout {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#map-container {
+  flex: 1 1 auto;
+  min-height: 280px;
+  width: 100%;
+  background: #0F172A;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+#map-plot {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  position: relative;
+  overflow: hidden !important;
+}
+
+#map-legend-bar {
+  position: relative !important;
+  z-index: 20 !important;
+  flex-shrink: 0;
+  background: #0B1120 !important;
+  border-top: 1px solid #1E293B;
+  padding: 6px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.4);
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.72rem;
+}
+
+.structure-pill {
+  display: inline-flex;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 4px;
+  overflow: hidden;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 15px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.pill-half {
+  padding: 1px 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95), 0 0 3px #000000;
+  white-space: nowrap;
+}
+
+.pill-left {
+  background: #2563EB;
+  color: #FFFFFF;
+  border-right: 1.5px solid #FFFFFF;
+}
+
+.pill-right {
+  background-color: #DC2626;
+  color: #FFFFFF;
+}
+
+.legend-divider {
+  width: 1px;
+  height: 14px;
+  background: #334155;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  color: #CBD5E1;
+  white-space: nowrap;
+}
+
+.legend-swatch-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.legend-swatch-hatch {
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  border: 1px solid #FFFFFF;
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.8) 2px, rgba(255,255,255,0.8) 3.5px);
+}
+
+.legend-swatch-hatch.hatch-dem {
+  background-color: #2563EB;
+}
+
+.legend-swatch-hatch.hatch-rep {
+  background-color: #DC2626;
+}
+
+.legend-swatch-flip {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  color: #FFFFFF;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.legend-swatch-flip.flip-dem {
+  background-color: #0284C7;
+}
+
+.legend-swatch-flip.flip-rep {
+  background-color: #DC2626;
+}
+
+/* Map Legend Interactive Controls */
+.legend-controls-group {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.map-control-btn {
+  background: #1E293B;
+  border: 1px solid #334155;
+  color: #94A3B8;
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-size: 0.70rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.map-control-btn:hover {
+  background: #334155;
+  color: #F8FAFC;
+  border-color: #64748B;
+}
+
+.filter-toggle-control {
+  background: #1E293B;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 3px 9px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #E2E8F0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.filter-toggle-control:hover {
+  border-color: #38BDF8;
+  background: #0F172A;
+}
+
+.filter-toggle-control input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: #38BDF8;
+  width: 13px;
+  height: 13px;
+  margin: 0;
+}
+
+/* Balance of Power Panel */
+#balance-panel {
+  flex-shrink: 0;
+  width: 100%;
+  background: #0F172A;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 7px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid #1E293B;
+  padding-bottom: 4px;
+}
+
+.panel-title {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: #F8FAFC;
+  letter-spacing: -0.01em;
+}
+
+.panel-subtitle {
+  font-size: 0.74rem;
+  color: #94A3B8;
+  margin: 0;
+}
+
+/* Majority 50 Threshold Bar Section */
+.bar-section {
+  background: #1E293B;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 6px 12px;
+}
+
+.bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.76rem;
+  margin-bottom: 12px;
+  color: #E2E8F0;
+}
+
+.bar-wrapper {
+  position: relative;
+  width: 100%;
+  height: 26px;
+  background: #0B1120;
+  border-radius: 5px;
+  overflow: visible;
+  margin-bottom: 4px;
+}
+
+.bar-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.bar-seg {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.seg-dem-safe { background: #1E40AF; }
+.seg-dem-holds { background: #2563EB; }
+.seg-dem-flips {
+  background: #0284C7;
+  border-top: 2px solid #38BDF8;
+  border-bottom: 2px solid #38BDF8;
+  box-shadow: inset 0 0 6px rgba(56, 189, 248, 0.6);
+}
+.seg-unpolled { background: #64748B; }
+.seg-rep-flips { background: #F87171; }
+.seg-rep-holds { background: #DC2626; }
+.seg-rep-safe { background: #991B1B; }
+
+/* Majority threshold vertical line at 50% */
+.majority-line {
+  position: absolute;
+  left: 50%;
+  top: -8px;
+  bottom: -8px;
+  width: 2px;
+  background: #F8FAFC;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.majority-label-pin {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #F8FAFC;
+  color: #0F172A;
+  font-size: 0.64rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+  z-index: 11;
+}
+
+.bar-sublegend {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  color: #94A3B8;
+  margin-top: 4px;
+}
+
+/* Segment Color Key */
+.bar-legend-card {
+  background: #1E293B;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.legend-card-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.bar-legend-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  font-size: 0.72rem;
+  color: #E2E8F0;
+}
+
+/* Scattergeo labels styling */
+.scattergeo, .textpoint, .textpoint text {
+  visibility: visible !important;
+  opacity: 1 !important;
+  font-weight: 700 !important;
+  font-size: 10px !important;
+  fill: #FFFFFF !important;
+  paint-order: stroke fill !important;
+  stroke: rgba(15, 23, 42, 0.95) !important;
+  stroke-width: 2.4px !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+/* Style 2 transfer flip badge SVG styling */
+.scattergeo .point path {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.75)) !important;
+}
+
+/* Eliminate artificial SVG clipping rects while strictly containing map inside map-plot */
+#map-plot .plot-container,
+#map-plot .svg-container,
+#map-plot svg.main-svg {
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+#map-plot .geolayer,
+#map-plot .geosubplot,
+#map-plot g.geo {
+  clip-path: none !important;
+}
+
+/* Direct SVG pattern and border styling on native Plotly choropleth paths */
+path.choroplethlocation.contested-seat {
+  stroke: #FFFFFF !important;
+  stroke-width: 2.2px !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  paint-order: fill stroke !important;
+}
+
+path.choroplethlocation.hatch-dem {
+  fill: url(#hatch-dem) !important;
+}
+
+path.choroplethlocation.hatch-dem_lean {
+  fill: url(#hatch-dem_lean) !important;
+}
+
+path.choroplethlocation.hatch-rep {
+  fill: url(#hatch-rep) !important;
+}
+
+path.choroplethlocation.hatch-rep_lean {
+  fill: url(#hatch-rep_lean) !important;
+}
+
+path.choroplethlocation.hatch-ind {
+  fill: url(#hatch-ind) !important;
+}
+
+path.choroplethlocation.hatch-no_data {
+  fill: url(#hatch-no_data) !important;
+}
+
+path.choroplethlocation.hatch-tie {
+  fill: url(#hatch-tie) !important;
+}
+
+/* Voter-weight heatmap legend gradient bar */
+.legend-gradient-bar {
+  width: 58px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  flex-shrink: 0;
+}
