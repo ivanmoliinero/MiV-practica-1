@@ -1,12 +1,14 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2026 US Senate Election Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css" />
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-  <style>
-    {{ css_content | safe }}
-  </style>
 </head>
+
 <body>
   <!-- Static SVG Pattern Definitions for 2026 Contested Races -->
   <svg style="position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none;" aria-hidden="true">
@@ -95,15 +97,14 @@
               <input type="checkbox" id="client-filter-toggle" />
               <span>Filter: 2026 Races in Play Only</span>
             </label>
-            <label class="filter-toggle-control heatmap-toggle-control" title="Show voter-weighted heatmap (absolute estimated voters per candidate)">
+            <label class="filter-toggle-control heatmap-toggle-control"
+              title="Show voter-weighted heatmap (absolute estimated voters per candidate)">
               <input type="checkbox" id="heatmap-toggle" />
               <span>🗳️ Voter Weight Heatmap</span>
             </label>
           </div>
         </div>
-        <div class="legend-row legend-colors" id="legend-colors-container">
-          {{ legend_colors_initial_html | safe }}
-        </div>
+        <div class="legend-row legend-colors" id="legend-colors-container"></div>
       </div>
     </div>
 
@@ -111,7 +112,7 @@
     <div id="balance-panel">
       <!-- Header -->
       <div class="panel-header">
-        <div class="panel-title">🏛️ 2026 US Senate Seat Balance {{ debug_badge_tag | safe }}</div>
+        <div class="panel-title">2026 US Senate Seat Balance</div>
         <div class="panel-subtitle">100 Seats Total • <b>50 Seats</b> Threshold for Chamber Majority</div>
       </div>
 
@@ -119,50 +120,27 @@
       <div class="bar-section">
         <div class="bar-header">
           <span><b>Seat Balance Bar (0 to 100):</b></span>
-          <span style="color: #38BDF8; font-weight: 700; font-size: 0.88rem;">DEM crosses 50-Seat Mark ({{ summary.projected_dem_total }} DEM vs. {{ summary.projected_rep_total }} REP)</span>
+          <span id="bar-header-tally" style="color: #38BDF8; font-weight: 700; font-size: 0.88rem;"></span>
         </div>
 
         <div class="bar-wrapper">
           <div class="majority-label-pin">50 Majority</div>
           <div class="majority-line"></div>
-          <div class="bar-track">
-            <div class="bar-seg seg-dem-safe" style="width: {{ summary.safe_dem_ind }}%;" title="{{ summary.safe_dem_ind }} Safe Democratic &amp; Independent Seats">{{ summary.safe_dem_ind }} Safe</div>
-            <div class="bar-seg seg-dem-holds" style="width: {{ summary.dem_holds }}%;" title="{{ summary.dem_holds }} Democratic Poll Holds">{{ summary.dem_holds }} Holds</div>
-            <div class="bar-seg seg-dem-flips" style="width: {{ summary.dem_flips }}%;" title="{{ summary.dem_flips }} Democratic Flips from GOP ({{ dem_flip_states }})">+{{ summary.dem_flips }}★</div>
-            <div class="bar-seg seg-unpolled" style="width: {{ summary.unpolled }}%;" title="{{ summary.unpolled }} Seats with No General Election Polls ({{ summary.unpolled_dem }} DEM, {{ summary.unpolled_rep }} REP)">{{ summary.unpolled }}</div>
-            {{ rep_flip_bar_html | safe }}
-            <div class="bar-seg seg-rep-holds" style="width: {{ summary.rep_holds }}%;" title="{{ summary.rep_holds }} Republican Poll Holds">{{ summary.rep_holds }} Holds</div>
-            <div class="bar-seg seg-rep-safe" style="width: {{ summary.safe_rep }}%;" title="{{ summary.safe_rep }} Safe Republican Seats">{{ summary.safe_rep }} Safe</div>
-          </div>
+          <div class="bar-track" id="balance-bar-track"></div>
         </div>
 
-        <div class="bar-sublegend">
-          <span>🔵 <b>{{ summary.projected_dem_total }} DEM Coalition</b> ({{ summary.safe_dem_ind }} Safe + {{ summary.dem_holds }} Holds + {{ summary.dem_flips }} Flips + {{ summary.unpolled_dem }} Unpolled)</span>
-          <span>🔴 <b>{{ summary.projected_rep_total }} Republican Party</b> ({{ summary.safe_rep }} Safe + {{ summary.rep_holds }} Holds + {{ summary.rep_flips }} Flips + {{ summary.unpolled_rep }} Unpolled)</span>
-        </div>
+        <div class="bar-sublegend" id="bar-sublegend"></div>
       </div>
 
       <!-- Segment Color Key -->
       <div class="bar-legend-card">
         <div class="legend-card-title">Seat Composition Key</div>
-        <div class="bar-legend-grid">
-          <div class="legend-item"><span class="legend-swatch" style="background:#1E40AF;"></span> <b>{{ summary.safe_dem_ind }}</b> Safe DEM &amp; IND</div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#2563EB;"></span> <b>{{ summary.dem_holds }}</b> DEM Holds</div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#0284C7; border: 1px solid #38BDF8;"></span> <b>+{{ summary.dem_flips }}</b> DEM Flips (Gain)</div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#64748B;"></span> <b>{{ summary.unpolled }}</b> Unpolled Seats</div>
-          {{ rep_flip_legend_html | safe }}
-          <div class="legend-item"><span class="legend-swatch" style="background:#DC2626;"></span> <b>{{ summary.rep_holds }}</b> REP Holds</div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#991B1B;"></span> <b>{{ summary.safe_rep }}</b> Safe REP</div>
-        </div>
+        <div class="bar-legend-grid" id="bar-legend-grid"></div>
       </div>
     </div>
   </div>
 
-  <script>
-    window.SENATE_CONFIG = {{ config_json | safe }};
-  </script>
-  <script>
-    {{ js_content | safe }}
-  </script>
+  <script src="dashboard.js"></script>
 </body>
+
 </html>

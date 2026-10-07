@@ -12,12 +12,9 @@ import pandas as pd
 from state_centroids import STATE_TO_ABBREV
 from state_vep import STATE_VEP
 
-try:
-    import streamlit as st
-    cache_data_decorator = st.cache_data
-except ImportError:
-    def cache_data_decorator(func):
-        return func
+from functools import lru_cache
+
+cache_data_decorator = lru_cache(maxsize=None)
 
 # Standard categories and corresponding hex colors for the discrete colorscale
 COLOR_CATEGORIES: List[str] = [

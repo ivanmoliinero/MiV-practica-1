@@ -22,13 +22,15 @@ STATES_GEOJSON_URL = (
 )
 
 MODULE_DIR = Path(__file__).resolve().parent
-RAW_CACHE_PATH = MODULE_DIR / "_us_states_cache.geojson"
-SPLIT_CACHE_PATH = MODULE_DIR / "_us_states_split.geojson"
-OUTLINES_CACHE_PATH = MODULE_DIR / "_us_states_outlines.geojson"
+WEB_DATA_DIR = MODULE_DIR / "web" / "data"
+RAW_CACHE_PATH = WEB_DATA_DIR / "_us_states_cache.geojson"
+SPLIT_CACHE_PATH = WEB_DATA_DIR / "_us_states_split.geojson"
+OUTLINES_CACHE_PATH = WEB_DATA_DIR / "_us_states_outlines.geojson"
 
 
 def fetch_raw_states_geojson() -> dict:
     """Load or download the raw 50-state GeoJSON."""
+    WEB_DATA_DIR.mkdir(parents=True, exist_ok=True)
     if RAW_CACHE_PATH.exists():
         with RAW_CACHE_PATH.open("r", encoding="utf-8") as f:
             return json.load(f)
