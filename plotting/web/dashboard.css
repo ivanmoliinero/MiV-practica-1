@@ -23,6 +23,29 @@ html, body {
   background: #020617;
 }
 
+.dashboard-header {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 4px;
+}
+
+.dashboard-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #F8FAFC;
+}
+
+.dashboard-subtitle {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
 #map-container {
   flex: 1 1 auto;
   min-height: 280px;
