@@ -31,6 +31,7 @@ from state_centroids import (
     STATE_TO_ABBREV,
     get_seat_symbol_coord,
 )
+from state_vep import STATE_VEP
 
 
 def _create_discrete_colorscale() -> Tuple[List[List], float, float]:
@@ -400,9 +401,136 @@ def build_interactive_dashboard_html(
           <div class="legend-item"><span class="legend-swatch" style="background:#1E293B; border: 1px solid #475569;"></span> <span>Safe / Muted (65 seats)</span></div>
     """
 
+    # ---------------------------------------------------------------------------
+    # Voter-weight heatmap data preparation
+    # ---------------------------------------------------------------------------
+    # Each row in df corresponds 1-to-1 with 'locs' (100 feature_ids in same order).
+    # DEM leading seats have positive z: +dem_voter_weight (blue intensity)
+    # REP leading seats have negative z: -rep_voter_weight (red intensity)
+    # Safe / Uncontested seats have z: 0.0 (dark slate neutral)
+
+    heatmap_z: list = []
+    heatmap_tooltips: list = []
+    dem_weights: list = []
+    rep_weights: list = []
+
+    for _, row in df.iterrows():
+        leader = row.get("poll_leader")
+        dem_w = row.get("dem_voter_weight")
+        rep_w = row.get("rep_voter_weight")
+        is_cont = row.get("is_contested_2026", False)
+        state_name = row["state"]
+        side_lbl = "Senate Seat 1" if row["side"] == "left" else "Senate Seat 2"
+        senator_name = row.get("senator_name", "")
+        party_name = row.get("party", "")
+        vep_val = STATE_VEP.get(state_name, 0)
+
+        if is_cont and dem_w and leader == "DEM":
+            w = float(dem_w)
+            dem_weights.append(w)
+            heatmap_z.append(w)
+            pct = (w / vep_val * 100.0) if vep_val else 0.0
+            margin = row.get("poll_margin")
+            margin_str = f"DEM +{margin:.1f} pp" if margin is not None else "Projected DEM Lead"
+            tip_html = (
+                f"<b>🏛️ {state_name} ({side_lbl}) — 2026 Voter Weight</b><br>"
+                f"─────────────────────────────<br>"
+                f"<b>Projected Winner:</b> Democrat ({margin_str})<br>"
+                f"<b>👥 Estimated Supporters:</b> ~{int(w):,d} voters<br>"
+                f"<b>State Eligible Population (VEP):</b> {vep_val:,d}<br>"
+                f"<b>Projected Vote Share:</b> {pct:.1f}%<br>"
+                f"─────────────────────────────<br>"
+                f"<i>Formula: 2024 VEP (UF Election Lab) × Polling %</i>"
+            )
+            heatmap_tooltips.append(tip_html)
+        elif is_cont and rep_w and leader == "REP":
+            w = float(rep_w)
+            rep_weights.append(w)
+            heatmap_z.append(-w)  # Negative z for Republican continuous gradient
+            pct = (w / vep_val * 100.0) if vep_val else 0.0
+            margin = row.get("poll_margin")
+            margin_str = f"REP +{abs(margin):.1f} pp" if margin is not None else "Projected REP Lead"
+            tip_html = (
+                f"<b>🏛️ {state_name} ({side_lbl}) — 2026 Voter Weight</b><br>"
+                f"─────────────────────────────<br>"
+                f"<b>Projected Winner:</b> Republican ({margin_str})<br>"
+                f"<b>👥 Estimated Supporters:</b> ~{int(w):,d} voters<br>"
+                f"<b>State Eligible Population (VEP):</b> {vep_val:,d}<br>"
+                f"<b>Projected Vote Share:</b> {pct:.1f}%<br>"
+                f"─────────────────────────────<br>"
+                f"<i>Formula: 2024 VEP (UF Election Lab) × Polling %</i>"
+            )
+            heatmap_tooltips.append(tip_html)
+        else:
+            heatmap_z.append(0.0)
+            tip_html = (
+                f"<b>🏛️ {state_name} ({side_lbl})</b><br>"
+                f"─────────────────────────────<br>"
+                f"<b>Senator:</b> {senator_name} ({party_name})<br>"
+                f"🔒 <b>Safe Seat:</b> Not up for election in 2026"
+            )
+            heatmap_tooltips.append(tip_html)
+
+    max_voter_weight = max(
+        max(dem_weights) if dem_weights else 1.0,
+        max(rep_weights) if rep_weights else 1.0
+    )
+
+    # Continuous diverging scale centered at 0:
+    # 0.0 -> -max_voter_weight (Deep Red, max REP supporters)
+    # ~0.485 -> min REP supporters (Light Red)
+    # 0.495 to 0.505 -> z = 0 (Uncontested / Safe seats, Dark Slate Neutral)
+    # ~0.515 -> min DEM supporters (Light Blue)
+    # 1.0 -> +max_voter_weight (Deep Blue, max DEM supporters)
+    heatmap_colorscale = [
+        [0.0, "#7F1D1D"],
+        [0.20, "#991B1B"],
+        [0.35, "#DC2626"],
+        [0.45, "#FCA5A5"],
+        [0.488, "#FEE2E2"],
+        [0.495, "#1E293B"],
+        [0.505, "#1E293B"],
+        [0.512, "#DBEAFE"],
+        [0.55, "#93C5FD"],
+        [0.65, "#3B82F6"],
+        [0.80, "#2563EB"],
+        [1.0, "#1E3A8A"],
+    ]
+
+    def _fmt_voters(val: float) -> str:
+        if val >= 1_000_000:
+            return f"~{val / 1_000_000:.1f}M"
+        if val >= 1_000:
+            return f"~{val / 1_000:.0f}K"
+        return f"~{val:,.0f}"
+
+    dem_min_lbl = _fmt_voters(min(dem_weights)) if dem_weights else "0"
+    dem_max_lbl = _fmt_voters(max(dem_weights)) if dem_weights else "0"
+    rep_min_lbl = _fmt_voters(min(rep_weights)) if rep_weights else "0"
+    rep_max_lbl = _fmt_voters(max(rep_weights)) if rep_weights else "0"
+
     legend_colors_initial_html = (
         legend_colors_polls_only_html if view == "polls_only" else legend_colors_combined_html
     )
+
+    # Legend HTML for the voter-weight heatmap mode with explicit gradient swatches and numbers
+    legend_colors_heatmap_html = f"""
+          <div class="legend-item">
+            <span class="legend-gradient-bar" style="background: linear-gradient(to right, #DBEAFE, #3B82F6, #1E3A8A);"></span>
+            <span><b>DEM:</b> {dem_min_lbl} (light) → {dem_max_lbl} (deep)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-gradient-bar" style="background: linear-gradient(to right, #FEE2E2, #DC2626, #7F1D1D);"></span>
+            <span><b>REP:</b> {rep_min_lbl} (light) → {rep_max_lbl} (deep)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-swatch" style="background: #1E293B; border: 1px solid #475569;"></span>
+            <span>Uncontested / Safe Seat</span>
+          </div>
+          <div class="legend-item" style="font-size: 0.68rem; color: #94A3B8; font-style: italic;">
+            Estimated = State VEP (UF Election Lab) × Polling %
+          </div>
+    """
 
     debug_badge_tag = (
         f'<span style="font-size:0.70rem; background:#D97706; color:#FFFFFF; padding:2px 7px; border-radius:4px; margin-left:8px; font-weight:700; vertical-align:middle;">'
@@ -830,6 +958,16 @@ def build_interactive_dashboard_html(
     path.choroplethlocation.hatch-tie {{
       fill: url(#hatch-tie) !important;
     }}
+
+    /* Voter-weight heatmap legend gradient bar */
+    .legend-gradient-bar {{
+      width: 58px;
+      height: 12px;
+      border-radius: 3px;
+      display: inline-block;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      flex-shrink: 0;
+    }}
   </style>
 </head>
 <body>
@@ -920,6 +1058,10 @@ def build_interactive_dashboard_html(
               <input type="checkbox" id="client-filter-toggle" />
               <span>Filter: 2026 Races in Play Only</span>
             </label>
+            <label class="filter-toggle-control heatmap-toggle-control" title="Show voter-weighted heatmap (absolute estimated voters per candidate)">
+              <input type="checkbox" id="heatmap-toggle" />
+              <span>🗳️ Voter Weight Heatmap</span>
+            </label>
           </div>
         </div>
         <div class="legend-row legend-colors" id="legend-colors-container">
@@ -987,6 +1129,7 @@ def build_interactive_dashboard_html(
     const pollsZOnly = {json.dumps(polls_z_only)};
     const legendColorsCombinedHtml = {json.dumps(legend_colors_combined_html)};
     const legendColorsPollsOnlyHtml = {json.dumps(legend_colors_polls_only_html)};
+    const legendColorsHeatmapHtml = {json.dumps(legend_colors_heatmap_html)};
 
     const tooltips = {json.dumps(tooltips)};
     const stateNames = {json.dumps(state_names)};
@@ -1083,6 +1226,16 @@ def build_interactive_dashboard_html(
       name: 'Seat Flips'
     }};
 
+    // Voter-weight heatmap parameters for Trace 0 restyling
+    const heatmapZ = {json.dumps(heatmap_z)};
+    const heatmapColorscale = {json.dumps(heatmap_colorscale)};
+    const heatmapTooltips = {json.dumps(heatmap_tooltips)};
+    const heatmapZmin = {-round(max_voter_weight)};
+    const heatmapZmax = {round(max_voter_weight)};
+    const normalColorscale = colorscale;
+    const normalZmin = -0.5;
+    const normalZmax = {k} - 0.5;
+
     // Retrieve persistent zoom and pan state from sessionStorage
     let savedGeoState = null;
     try {{
@@ -1123,10 +1276,37 @@ def build_interactive_dashboard_html(
 
     // Apply diagonal hatch patterns and crisp white borders directly to Trace 0 paths
     function applyContestedStyles() {{
+      const heatmapCb = document.getElementById('heatmap-toggle');
+      if (heatmapCb && heatmapCb.checked) return;
+
       const choroplethTraces = document.querySelectorAll('#map-plot g.trace.choropleth, #map-plot g.choropleth');
       if (!choroplethTraces || choroplethTraces.length === 0) return;
-      const baseTrace = choroplethTraces[0];
-      const halfPaths = baseTrace.querySelectorAll('path.choroplethlocation');
+
+      // Identify the 100-seat halves choropleth trace (Trace 0)
+      let halvesTrace = null;
+      for (const t of choroplethTraces) {{
+        const paths = t.querySelectorAll('path.choroplethlocation');
+        if (paths.length === 100) {{
+          halvesTrace = t;
+          break;
+        }}
+      }}
+      if (!halvesTrace && choroplethTraces.length > 0) {{
+        halvesTrace = choroplethTraces[0];
+      }}
+      if (!halvesTrace) return;
+
+      // Clean any accidental classes on outline or other non-halves traces
+      for (const t of choroplethTraces) {{
+        if (t !== halvesTrace) {{
+          const wrongPaths = t.querySelectorAll('path.contested-seat, path[class*="hatch-"]');
+          wrongPaths.forEach(p => {{
+            p.classList.remove('contested-seat', 'hatch-dem', 'hatch-dem_lean', 'hatch-rep', 'hatch-rep_lean', 'hatch-ind', 'hatch-no_data', 'hatch-tie');
+          }});
+        }}
+      }}
+
+      const halfPaths = halvesTrace.querySelectorAll('path.choroplethlocation');
       if (!halfPaths || halfPaths.length === 0) return;
 
       for (let idx = 0; idx < halfPaths.length; idx++) {{
@@ -1145,6 +1325,17 @@ def build_interactive_dashboard_html(
             p.classList.add('contested-seat', patternClass);
           }}
         }}
+      }}
+    }}
+
+    // Remove all pattern classes when heatmap gradient mode is active
+    function clearContestedStyles() {{
+      const choroplethTraces = document.querySelectorAll('#map-plot g.trace.choropleth, #map-plot g.choropleth');
+      for (const t of choroplethTraces) {{
+        const paths = t.querySelectorAll('path.choroplethlocation');
+        paths.forEach(p => {{
+          p.classList.remove('contested-seat', 'hatch-dem', 'hatch-dem_lean', 'hatch-rep', 'hatch-rep_lean', 'hatch-ind', 'hatch-no_data', 'hatch-tie');
+        }});
       }}
     }}
 
@@ -1182,6 +1373,7 @@ def build_interactive_dashboard_html(
     }}
 
     // Initial render with interactive pan and zoom
+    // Trace indices: 0=halves, 1=outlines, 2=abbrevText, 3=flips
     Plotly.newPlot('map-plot', [mapTraceHalves, mapTraceOutlines, mapTraceText, mapTraceFlips], mapLayout, {{
       responsive: true,
       displayModeBar: false,
@@ -1251,6 +1443,7 @@ def build_interactive_dashboard_html(
 
     // Wire in-map client-side filter toggle: instant restyle, zero map regeneration, zoom 100% frozen
     const filterCheckbox = document.getElementById('client-filter-toggle');
+    const heatmapCheckbox = document.getElementById('heatmap-toggle');
     const legendColorsContainer = document.getElementById('legend-colors-container');
 
     if (filterCheckbox) {{
@@ -1263,6 +1456,8 @@ def build_interactive_dashboard_html(
 
       filterCheckbox.addEventListener('change', (e) => {{
         const checked = e.target.checked;
+        // Heatmap mode takes priority over this toggle — ignore if heatmap is active
+        if (heatmapCheckbox && heatmapCheckbox.checked) return;
         const targetZ = checked ? pollsZOnly : pollsZCombined;
 
         // Instant update via Plotly.restyle: 0ms latency, zero map regeneration, zoom 100% frozen
@@ -1277,6 +1472,52 @@ def build_interactive_dashboard_html(
         try {{
           sessionStorage.setItem('senate_map_filter_only', checked ? 'true' : 'false');
         }} catch (err) {{}}
+      }});
+    }}
+
+    // Wire voter-weight heatmap toggle: native restyle on Trace 0, zero DOM recreation, zoom 100% frozen
+    if (heatmapCheckbox) {{
+      heatmapCheckbox.addEventListener('change', (e) => {{
+        const isHeatmap = e.target.checked;
+
+        if (isHeatmap) {{
+          clearContestedStyles();
+          if (filterCheckbox) filterCheckbox.disabled = true;
+
+          Plotly.restyle('map-plot', {{
+            z: [heatmapZ],
+            colorscale: [heatmapColorscale],
+            zmin: heatmapZmin,
+            zmax: heatmapZmax,
+            hovertext: [heatmapTooltips]
+          }}, [0]).then(() => {{
+            clearContestedStyles();
+          }});
+
+          if (legendColorsContainer) {{
+            legendColorsContainer.innerHTML = legendColorsHeatmapHtml;
+          }}
+        }} else {{
+          if (filterCheckbox) filterCheckbox.disabled = false;
+
+          const targetZ = (filterCheckbox && filterCheckbox.checked) ? pollsZOnly : pollsZCombined;
+
+          Plotly.restyle('map-plot', {{
+            z: [targetZ],
+            colorscale: [normalColorscale],
+            zmin: normalZmin,
+            zmax: normalZmax,
+            hovertext: [tooltips]
+          }}, [0]).then(() => {{
+            applyContestedStyles();
+          }});
+
+          if (legendColorsContainer) {{
+            legendColorsContainer.innerHTML = (filterCheckbox && filterCheckbox.checked)
+              ? legendColorsPollsOnlyHtml
+              : legendColorsCombinedHtml;
+          }}
+        }}
       }});
     }}
 
