@@ -3,6 +3,7 @@ En aquesta pràctica s'evalua un plot poc adient trobat per Internet, que viola 
 
 ## Plot original
 ![alt text](./plot-incorrecte.png)
+
 Aquest plot presenta diversos problemes comentats a la documentació de la pràctica.
 
 ## Correccions

@@ -312,60 +312,35 @@ def export_all() -> None:
     mid1_lbl = f"{round(max_voter_weight * 0.32012 / 1_000_000):.0f}M"
 
     legend_colors_heatmap_html = f"""
-          <div class="heatmap-legend-wrapper">
-            <div class="heatmap-legend-header">
-              <div class="heatmap-legend-party-rep">
-                <span class="party-indicator-dot dot-rep"></span>
-                <span><b>REP</b> Estimated Supporters (0 → ~{max_lbl})</span>
-              </div>
-              <div class="heatmap-legend-center-info">
-                <span class="party-indicator-dot dot-safe"></span>
-                <span>Uncontested / Safe Seat (0)</span>
-              </div>
-              <div class="heatmap-legend-party-dem">
-                <span><b>DEM</b> Estimated Supporters (0 → ~{max_lbl})</span>
-                <span class="party-indicator-dot dot-dem"></span>
-              </div>
-            </div>
-
+          <div class="heatmap-compact-row">
             <div class="heatmap-bar-container">
               <div class="heatmap-continuous-bar"></div>
               <div class="heatmap-ticks-track">
                 <div class="heatmap-tick" style="left: 0%;">
-                  <div class="tick-pip"></div>
                   <span class="tick-val">{max_lbl}</span>
                 </div>
                 <div class="heatmap-tick" style="left: 18%;">
-                  <div class="tick-pip"></div>
                   <span class="tick-val">{mid2_lbl}</span>
                 </div>
                 <div class="heatmap-tick" style="left: 34%;">
-                  <div class="tick-pip"></div>
                   <span class="tick-val">{mid1_lbl}</span>
                 </div>
                 <div class="heatmap-tick tick-center" style="left: 50%;">
-                  <div class="tick-pip tick-pip-center"></div>
                   <span class="tick-val tick-val-center">0</span>
                 </div>
                 <div class="heatmap-tick" style="left: 66%;">
-                  <div class="tick-pip"></div>
                   <span class="tick-val">{mid1_lbl}</span>
                 </div>
                 <div class="heatmap-tick" style="left: 82%;">
-                  <div class="tick-pip"></div>
                   <span class="tick-val">{mid2_lbl}</span>
                 </div>
                 <div class="heatmap-tick" style="left: 100%;">
-                  <div class="tick-pip"></div>
                   <span class="tick-val">{max_lbl}</span>
                 </div>
               </div>
             </div>
-
-            <div class="heatmap-subtext-bar">
-              <div class="heatmap-subtext-formula" style="margin-left: auto;">
-                Formula: 2024 VEP (UF Election Lab) × Polling %
-              </div>
+            <div class="heatmap-subtext-formula">
+              Formula: 2024 VEP (UF Election Lab) × Polling %
             </div>
           </div>
     """

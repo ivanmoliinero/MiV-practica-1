@@ -407,6 +407,19 @@
       legendBar.classList.remove('heatmap-mode');
     }
 
+    // Sync dynamic ceiling label in Row 1 indicator
+    if (heatmapZmax) {
+      const maxLabel = (heatmapZmax / 1e6).toFixed(1) + 'M';
+      const repEndpoint = document.getElementById('heatmap-rep-endpoint');
+      const demEndpoint = document.getElementById('heatmap-dem-endpoint');
+      if (repEndpoint) {
+        repEndpoint.innerHTML = `<span class="party-indicator-dot dot-rep"></span><span><b>REP</b> 0 → ~${maxLabel}</span>`;
+      }
+      if (demEndpoint) {
+        demEndpoint.innerHTML = `<span><b>DEM</b> 0 → ~${maxLabel}</span><span class="party-indicator-dot dot-dem"></span>`;
+      }
+    }
+
     if (filterCheckbox) {
       if (isFilterActive) {
         filterCheckbox.checked = true;
