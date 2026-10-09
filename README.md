@@ -30,8 +30,8 @@ python plotting/export_data.py
 ```
 *(Opcional: Si es volen regenerar els polígons GeoJSON partits dels 50 estats des de zero, es pot executar `python plotting/geo_splitter.py`).*
 
-### 3. Servidor Local (Sense dependència de Node.js)
-Per visualitzar el dashboard en local sense dependències externes per la complexitat d'aquesta pràctica, utilitzem el servidor HTTP natiu de Python:
+### 3. Servidor Local
+Per visualitzar el dashboard en local sense dependències externes no necessàries per la complexitat d'aquesta pràctica, utilitzem el servidor HTTP natiu de Python:
 ```bash
 python3 -m http.server 8000 --directory plotting/web
 ```
