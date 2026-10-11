@@ -94,7 +94,7 @@ def main():
     4. Iteratively scrapes and processes polling tables with polite throttling.
     5. Exports the complete polling dataset to senate_2026_polls.csv.
     """
-    session = create_session()
+    session = create_session() # init HTTP session
 
     # Step 1: Baseline current senators and in-play seats identification
     seats_in_play = fetch_and_save_current_senators(session)

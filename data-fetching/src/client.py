@@ -53,7 +53,7 @@ def fetch_with_backoff(
         try:
             response = session.get(url, params=params, timeout=25)
             if response.status_code == 429:
-                retry_after_str = response.headers.get("Retry-After")
+                retry_after_str = response.headers.get("Retry-After") # injected header by wikipedia
                 retry_after = (
                     int(retry_after_str)
                     if retry_after_str and retry_after_str.isdigit()
@@ -68,7 +68,7 @@ def fetch_with_backoff(
                 )
                 time.sleep(retry_after)
                 continue
-            response.raise_for_status()
+            response.raise_for_status() # other errors cause exception
             return response
         except requests.exceptions.RequestException as exc:
             if attempt == max_retries - 1:

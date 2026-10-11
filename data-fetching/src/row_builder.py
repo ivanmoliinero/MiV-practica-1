@@ -16,6 +16,7 @@ try:
         clean_pct_series,
         col_matches_candidate,
         find_matching_col,
+        find_all_matching_cols,
     )
 except ImportError:
     from config import YEAR, COLUMNS_ORDER
@@ -24,6 +25,7 @@ except ImportError:
         clean_pct_series,
         col_matches_candidate,
         find_matching_col,
+        find_all_matching_cols,
     )
 
 log = logging.getLogger("senate_scraper")
@@ -73,8 +75,10 @@ def build_rows_for_state(
     Builds structured CSV rows for a given state race, aligning candidate names
     with REP/DEM columns, extracting pollster sources and fieldwork dates,
     and filtering phantom rows where neither candidate has percentages.
+    "meta" contains metadata from Wikitext, whereas "poll_tables" contains the 
+    analyzed tables from Wikipedia links for each state with the polls.
     If no head-to-head polling rows are found, falls back to qualitative
-    forecaster prediction ratings (Cook, Sabato, Inside Elections, etc.).
+    forecaster prediction ratings.
     """
     cand1, party1 = meta.get("candidate_1"), meta.get("party_1")
     cand2, party2 = meta.get("candidate_2"), meta.get("party_2")
@@ -95,18 +99,34 @@ def build_rows_for_state(
         for df in poll_tables:
             rep_col = next((c for c in df.columns if col_matches_candidate(c, rep_name)), None) if rep_name else None
             dem_col = next((c for c in df.columns if col_matches_candidate(c, dem_name)), None) if dem_name else None
-            unk_col = find_matching_col(df, ["undecided", "don't know", "dk", "other/undecided", "other"])
+            cand_cols = [c for c in [rep_col, dem_col] if c]
+            unk_cols = find_all_matching_cols(
+                df,
+                ["undecided", "don't know", "dk", "other/undecided", "other", "neither"],
+                exclude=["date", "margin", "sample", "poll", "source"] + cand_cols,
+            )
             src_col = find_matching_col(df, ["poll source", "source of poll", "pollster", "firm", "surveyor", "source"], exclude=["date"])
             date_col = find_matching_col(df, ["date(s) administered", "dates administered", "date administered", "dates", "date"], exclude=["update"])
 
             rep_pct = clean_pct_series(df[rep_col]) if rep_col else pd.Series([None] * len(df))
             dem_pct = clean_pct_series(df[dem_col]) if dem_col else pd.Series([None] * len(df))
-            unk_pct = clean_pct_series(df[unk_col]) if unk_col else pd.Series([None] * len(df))
+
+            # Clean and verify numeric percentages for all undecided/other columns, then aggregate
+            valid_unk_series = []
+            for c in unk_cols:
+                s = clean_pct_series(df[c])
+                if s.notna().any():
+                    valid_unk_series.append(s)
+
+            if valid_unk_series:
+                unk_pct = pd.concat(valid_unk_series, axis=1).sum(axis=1, min_count=1).round(2)
+            else:
+                unk_pct = pd.Series([None] * len(df))
 
             for i in range(len(df)):
                 rep_v = rep_pct.iloc[i] if (rep_col and i < len(rep_pct)) else None
                 dem_v = dem_pct.iloc[i] if (dem_col and i < len(dem_pct)) else None
-                unk_v = unk_pct.iloc[i] if (unk_col and i < len(unk_pct)) else None
+                unk_v = unk_pct.iloc[i] if i < len(unk_pct) else None
                 src_v = clean_text_field(df[src_col].iloc[i]) if (src_col and i < len(df)) else None
                 date_v = clean_text_field(df[date_col].iloc[i]) if (date_col and i < len(df)) else None
 
@@ -127,7 +147,7 @@ def build_rows_for_state(
                     "fecha_encuesta": date_v,
                     "porc_republicano_sillon_en_juego": rep_v if pd.notna(rep_v) else None,
                     "porc_democrata_sillon_en_juego": dem_v if pd.notna(dem_v) else None,
-                    "indecision": unk_v if pd.notna(unk_v) else None,
+                    "indecision": round(float(unk_v), 2) if (unk_v is not None and pd.notna(unk_v)) else None,
                     "error": None,
                 })
 

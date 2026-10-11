@@ -123,6 +123,10 @@ def extract_page_election_data(
     inside_poll_section = False
     inside_pred_section = False
 
+    # State machine for Polling and Prediction finding.
+    # We need to check for tables under General election -> Polling or General election -> Predictions.
+    # Our FSM guarantees that analysed tables are under those sections, to avoid obtaining data from incorrect
+    # tables of the same Wikipedia page.
     for tag in soup.find_all(["h2", "h3", "h4", "table"]):
         if tag.name == "h2":
             text = tag.get_text(strip=True).lower()
@@ -149,24 +153,12 @@ def extract_page_election_data(
             elif inside_pred_section and pred_table_tag is None:
                 pred_table_tag = tag
 
-    # Fallback search for predictions table if not located under strict h2/h3 hierarchy
-    if pred_table_tag is None:
-        for heading in soup.find_all(["h2", "h3", "h4"]):
-            htext = heading.get_text(strip=True).lower()
-            if "prediction" in htext or "race rating" in htext:
-                nxt = heading.find_next("table")
-                if nxt:
-                    pred_table_tag = nxt
-                    break
-
     # Parse polling tables
     poll_dfs = []
     for html_fragment in poll_tables_html:
         try:
             dfs = pd.read_html(io.StringIO(html_fragment), flavor="lxml")
             for df in dfs:
-                if isinstance(df.columns, pd.MultiIndex):
-                    df.columns = [" ".join(str(c) for c in col).strip() for col in df.columns]
                 if is_polling_table(df):
                     poll_dfs.append(df)
         except Exception:

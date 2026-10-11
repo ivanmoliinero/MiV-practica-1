@@ -106,3 +106,23 @@ def find_matching_col(
         if any(kw in c_lower for kw in keywords) and not any(ex in c_lower for ex in exclude):
             return col
     return None
+
+
+def find_all_matching_cols(
+    df: pd.DataFrame,
+    keywords: list[str],
+    exclude: list[str] | None = None,
+) -> list[str]:
+    """
+    Finds all distinct columns in the DataFrame whose names contain any of the
+    target keywords while excluding columns containing any forbidden tokens.
+    """
+    exclude = exclude or []
+    matches = []
+    for col in df.columns:
+        c_lower = str(col).lower()
+        if any(kw in c_lower for kw in keywords) and not any(ex.lower() in c_lower for ex in exclude if ex):
+            if col not in matches:
+                matches.append(col)
+    return matches
+
