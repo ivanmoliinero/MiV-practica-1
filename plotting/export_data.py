@@ -10,8 +10,6 @@ import json
 from pathlib import Path
 from typing import List
 
-import pandas as pd
-
 from data_loader import (
     COLOR_CATEGORIES,
     COLOR_PALETTE,
@@ -37,18 +35,11 @@ def _generate_flip_badge_records(flips: List[dict]) -> List[dict]:
     for f in flips:
         coord = get_seat_symbol_coord(f["feature_id"])
         color = COLOR_PALETTE["DEM"] if f["flip_incoming_party"] == "DEM" else COLOR_PALETTE["REP"]
-        margin_str = f"+{f['poll_margin']:.1f} pp" if f["poll_margin"] is not None else "Lead"
         records.append({
             "lat": coord[0],
             "lon": coord[1],
             "color": color,
             "text": "⇄",
-            "tooltip": (
-                f"<b>⚡ SEAT FLIP: {f['state']} ({f['abbrev']})</b><br>"
-                f"Incumbent Party: {f['party']}<br>"
-                f"2026 Poll Leader: {f['poll_leader']} ({margin_str})<br>"
-                f"Polls Analyzed: {f['n_polls']}"
-            ),
         })
     return records
 
@@ -91,7 +82,6 @@ def export_all() -> None:
             "lons": [b["lon"] for b in records],
             "colors": [b["color"] for b in records],
             "texts": [b["text"] for b in records],
-            "tooltips": [b["tooltip"] for b in records],
         }
     }
 
@@ -107,6 +97,8 @@ def export_all() -> None:
     contested_by_state = {}
     for _, row in df[df["is_contested_2026"]].iterrows():
         contested_by_state[row["state"]] = row
+
+    ## HEATMAP VIEW ##
 
     heatmap_z = []
     heatmap_tooltips = []

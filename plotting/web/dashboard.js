@@ -188,8 +188,7 @@
         opacity: 1.0,
       },
       showlegend: false,
-      hoverinfo: 'text',
-      hovertext: activeBadges.tooltips,
+      hoverinfo: 'skip',
       name: 'Seat Flips',
     };
 

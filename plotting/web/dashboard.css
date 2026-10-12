@@ -455,6 +455,14 @@ html, body {
   clip-path: none !important;
 }
 
+/* Let pointer events pass through Scattergeo overlays (flip badges and postal abbrevs) */
+/* so that hovering over them displays the underlying state choropleth tooltip */
+#map-plot .scattergeo,
+#map-plot g.trace.scattergeo,
+#map-plot .scattergeo * {
+  pointer-events: none !important;
+}
+
 /* Direct SVG pattern and border styling on native Plotly choropleth paths */
 path.choroplethlocation.contested-seat {
   stroke: #FFFFFF !important;
