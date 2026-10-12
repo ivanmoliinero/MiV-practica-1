@@ -39,7 +39,7 @@ MONTH_MAP = {m: i for i, m in enumerate(MONTHS_LIST, 1)}
 
 # Half-life for exponential temporal decay (28 days)
 HALF_LIFE_DAYS = 28.0
-DECAY_RATE_K = math.log(2.0) / HALF_LIFE_DAYS  # ~0.024755
+DECAY_RATE_K = math.log(2.0) / HALF_LIFE_DAYS
 
 
 def parse_poll_end_date(d_str: str | None) -> Optional[datetime]:
@@ -186,7 +186,7 @@ def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
             else None
         )
         n_polls = len(agg_polls)
-        method_label = f"{n_polls} aggregator{'s' if n_polls > 1 else ''}"
+        method_label = f"{n_polls} aggregator{'s' if n_polls > 1 else ''}" # for the final tooltip.
     elif not to_use.empty:
         # Level 2 & 3: Individual polls with temporal decay and partisan shrinkage
         parsed_dates = to_use["fecha_encuesta"].apply(parse_poll_end_date)
@@ -210,6 +210,7 @@ def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
 
         weight_sum = sum(weights)
         if weight_sum > 0:
+            # Weighted avg with bias shrinkage and temporary decay.
             mean_rep = float(sum(w * r for w, r in zip(weights, to_use["porc_republicano_sillon_en_juego"])) / weight_sum)
             mean_opp = float(sum(w * d for w, d in zip(weights, to_use["porc_democrata_sillon_en_juego"])) / weight_sum)
             valid_ind_mask = to_use["indecision"].notna() if "indecision" in to_use.columns else pd.Series([False] * len(to_use))
