@@ -431,36 +431,6 @@ body {
   margin-top: 4px;
 }
 
-/* Segment Color Key */
-.bar-legend-card {
-  background: #1E293B;
-  border: 1px solid #334155;
-  border-radius: 6px;
-  padding: 5px 10px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: nowrap;
-}
-
-.legend-card-title {
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: #94A3B8;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-}
-
-.bar-legend-grid {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 14px;
-  font-size: 0.72rem;
-  color: #E2E8F0;
-}
-
 /* Scattergeo labels styling */
 .scattergeo,
 .textpoint,

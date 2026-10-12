@@ -10,7 +10,7 @@
   try {
     // Concurrent fetch of all required static data assets
     const [senateData, splitGeojson, outlinesGeojson] = await Promise.all([
-      fetch('./data/senate_data.json').then((r) => {
+      fetch('./data/senate_data.json?t=1').then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status} fetching senate_data.json`);
         return r.json();
       }),
@@ -67,9 +67,8 @@
           <div class="bar-seg seg-dem-safe" style="width: ${safeDem}%;" title="${safeDem} Safe Democratic Seats">${safeDem} Safe</div>
           <div class="bar-seg seg-dem-holds" style="width: ${s.dem_holds}%;" title="${s.dem_holds} Democratic Poll Holds">${s.dem_holds} Holds</div>
           <div class="bar-seg seg-dem-flips" style="width: ${s.dem_flips}%;" title="${s.dem_flips} Democratic Flips from GOP (${s.dem_flip_states})">+${s.dem_flips}★</div>
-          <div class="bar-seg seg-ind-safe" style="width: ${safeInd}%;" title="${safeInd} Safe Independent Seats (Angus King ME, Bernie Sanders VT)">${safeInd}</div>
+          <div class="bar-seg seg-ind-safe" style="width: ${safeInd}%;" title="${safeInd} Safe Independent Seats">${safeInd}</div>
           ${indFlipBar}
-          <div class="bar-seg seg-unpolled" style="width: ${s.unpolled}%;" title="${s.unpolled} Seats with No General Election Polls (${s.unpolled_dem} DEM, ${s.unpolled_rep} REP)">${s.unpolled}</div>
           ${repFlipBar}
           <div class="bar-seg seg-rep-holds" style="width: ${s.rep_holds}%;" title="${s.rep_holds} Republican Poll Holds">${s.rep_holds} Holds</div>
           <div class="bar-seg seg-rep-safe" style="width: ${s.safe_rep}%;" title="${s.safe_rep} Safe Republican Seats">${s.safe_rep} Safe</div>
@@ -78,33 +77,12 @@
 
       const sublegend = document.getElementById('bar-sublegend');
       if (sublegend) {
+        const demFlipTxt = s.dem_flips > 0 ? ` + ${s.dem_flips} Flips` : '';
+        const repFlipTxt = s.rep_flips > 0 ? ` + ${s.rep_flips} Flips` : '';
         sublegend.innerHTML = `
-          <span>🔵 <b>${s.projected_dem_total} DEM</b> (${safeDem} Safe + ${s.dem_holds} Holds + ${s.dem_flips} Flips + ${s.unpolled_dem} Unpolled)</span>
-          <span>🟡 <b>${projInd} IND</b> (${safeInd} Safe: ME, VT)</span>
-          <span>🔴 <b>${s.projected_rep_total} REP</b> (${s.safe_rep} Safe + ${s.rep_holds} Holds + ${s.rep_flips} Flips + ${s.unpolled_rep} Unpolled)</span>
-        `;
-      }
-
-      const repFlipLegend = s.rep_flips > 0
-        ? `<div class="legend-item"><span class="legend-swatch" style="background:#F87171;"></span> <b>+${s.rep_flips}</b> REP Flip (Gain)</div>`
-        : '';
-
-      const indFlipLegend = (s.ind_flips && s.ind_flips > 0)
-        ? `<div class="legend-item"><span class="legend-swatch" style="background:#FACC15;"></span> <b>+${s.ind_flips}</b> IND Flip (Gain)</div>`
-        : '';
-
-      const legendGrid = document.getElementById('bar-legend-grid');
-      if (legendGrid) {
-        legendGrid.innerHTML = `
-          <div class="legend-item"><span class="legend-swatch" style="background:#1E40AF;"></span> <b>${safeDem}</b> Safe DEM</div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#2563EB;"></span> <b>${s.dem_holds}</b> DEM Holds</div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#0284C7; border: 1px solid #38BDF8;"></span> <b>+${s.dem_flips}</b> DEM Flips (Gain)</div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#EAB308;"></span> <b>${safeInd}</b> Safe IND (ME, VT)</div>
-          ${indFlipLegend}
-          <div class="legend-item"><span class="legend-swatch" style="background:#64748B;"></span> <b>${s.unpolled}</b> Unpolled Seats</div>
-          ${repFlipLegend}
-          <div class="legend-item"><span class="legend-swatch" style="background:#DC2626;"></span> <b>${s.rep_holds}</b> REP Holds</div>
-          <div class="legend-item"><span class="legend-swatch" style="background:#991B1B;"></span> <b>${s.safe_rep}</b> Safe REP</div>
+          <span>🔵 <b>${s.projected_dem_total} DEM</b> (${safeDem} Safe + ${s.dem_holds} Holds${demFlipTxt})</span>
+          <span>🟡 <b>${projInd} IND</b> (${safeInd} Safe)</span>
+          <span>🔴 <b>${s.projected_rep_total} REP</b> (${s.safe_rep} Safe + ${s.rep_holds} Holds${repFlipTxt})</span>
         `;
       }
     }
