@@ -113,9 +113,11 @@ def export_all() -> None:
 
     dem_flip_states = ", ".join(f["abbrev"] for f in flips if f["flip_incoming_party"] == "DEM")
     rep_flip_states = ", ".join(f["abbrev"] for f in flips if f["flip_incoming_party"] == "REP")
+    ind_flip_states = ", ".join(f["abbrev"] for f in flips if f["flip_incoming_party"] == "IND")
 
     summary["dem_flip_states"] = dem_flip_states
     summary["rep_flip_states"] = rep_flip_states
+    summary["ind_flip_states"] = ind_flip_states
 
     payload = {
         "summary": summary,

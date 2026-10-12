@@ -64,13 +64,14 @@ def load_polls_csv(path: Optional[Path] = None) -> pd.DataFrame:
 
 def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
     """
-    Compute poll aggregates (leader, sub_category, margin, DEM %, REP %, count) for a given state.
+    Compute poll aggregates (leader, sub_category, margin, DEM/REP/IND %, count) for a given state.
 
     Categorization:
     - DEM lead > 2.0 pp -> 'DEM' (Solid Blue)
     - DEM lead <= 2.0 pp -> 'DEM_LEAN' (Soft Light Blue)
     - REP lead > 2.0 pp -> 'REP' (Solid Red)
     - REP lead <= 2.0 pp -> 'REP_LEAN' (Soft Light Red)
+    - IND lead -> 'IND' (Golden Yellow)
     - Exact 0.0 pp tie -> 'TIE' (Soft Violet)
     - No polling numbers -> 'NO_DATA' (Slate Gray)
     """
@@ -89,6 +90,16 @@ def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
         valid_polls["indecision"], errors="coerce"
     )
 
+    # Detect whether the main opponent running against the Republican candidate is DEM or IND
+    cand_parties = set()
+    if "partido_candidato_actual_1" in state_polls.columns:
+        cand_parties.update(state_polls["partido_candidato_actual_1"].dropna().unique())
+    if "partido_candidato_actual_2" in state_polls.columns:
+        cand_parties.update(state_polls["partido_candidato_actual_2"].dropna().unique())
+
+    has_ind_candidate = "IND" in cand_parties
+    opponent_party = "IND" if has_ind_candidate else "DEM"
+
     # Require both candidate percentages for genuine head-to-head general election matchups
     clean_polls = valid_polls.dropna(
         subset=["porc_republicano_sillon_en_juego", "porc_democrata_sillon_en_juego"],
@@ -101,28 +112,52 @@ def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
 
     if not to_use.empty:
         mean_rep = to_use["porc_republicano_sillon_en_juego"].mean()
-        mean_dem = to_use["porc_democrata_sillon_en_juego"].mean()
+        mean_opp = to_use["porc_democrata_sillon_en_juego"].mean()
         mean_other = to_use["indecision"].mean() if "indecision" in to_use.columns else None
         n_polls = len(to_use)
     else:
         mean_rep = None
-        mean_dem = None
+        mean_opp = None
         mean_other = None
         n_polls = 0
 
-    if mean_dem is not None and mean_rep is not None and pd.notna(mean_dem) and pd.notna(mean_rep):
-        # Check if other/undecided has a higher polling average than both major parties
+    if opponent_party == "IND":
+        mean_dem = None
+        mean_ind = mean_opp
+    else:
+        mean_dem = mean_opp
+        mean_ind = None
+
+    if mean_opp is not None and mean_rep is not None and pd.notna(mean_opp) and pd.notna(mean_rep):
+        # Check if other/undecided has a higher polling average than both major candidates
         has_other_lead = (
             mean_other is not None
             and pd.notna(mean_other)
-            and mean_other > mean_dem
+            and mean_other > mean_opp
             and mean_other > mean_rep
         )
 
         if has_other_lead:
             leader = "IND"
             sub_category = "IND"
-            margin = round(mean_other - max(mean_dem, mean_rep), 1)
+            margin = round(mean_other - max(mean_opp, mean_rep), 1)
+        elif opponent_party == "IND":
+            margin = round(mean_ind - mean_rep, 1)
+            if margin > 2.0:
+                leader = "IND"
+                sub_category = "IND"
+            elif 0 < margin <= 2.0:
+                leader = "IND"
+                sub_category = "IND"
+            elif margin < -2.0:
+                leader = "REP"
+                sub_category = "REP"
+            elif -2.0 <= margin < 0:
+                leader = "REP"
+                sub_category = "REP_LEAN"
+            else:
+                leader = "TIE"
+                sub_category = "TIE"
         else:
             margin = round(mean_dem - mean_rep, 1)
             if margin > 2.0:
@@ -145,8 +180,10 @@ def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
             "leader": leader,
             "sub_category": sub_category,
             "margin": margin,
+            "opponent_party": opponent_party,
             "mean_dem": mean_dem,
             "mean_rep": mean_rep,
+            "mean_ind": mean_ind,
             "mean_other": mean_other,
             "n_polls": n_polls,
             "is_prediction": False,
@@ -218,8 +255,10 @@ def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
             "leader": leader,
             "sub_category": sub_category,
             "margin": margin,
+            "opponent_party": opponent_party,
             "mean_dem": None,
             "mean_rep": None,
+            "mean_ind": None,
             "mean_other": None,
             "n_polls": len(pred_rows),
             "is_prediction": True,
@@ -230,8 +269,10 @@ def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
         "leader": "NO_DATA",
         "sub_category": "NO_DATA",
         "margin": None,
+        "opponent_party": opponent_party,
         "mean_dem": None,
         "mean_rep": None,
+        "mean_ind": None,
         "mean_other": None,
         "n_polls": 0,
         "is_prediction": False,
@@ -276,12 +317,14 @@ def _build_tooltip(
                 lines.append(f"<b>Forecasters Analyzed:</b> {n_polls} ratings (Cook, Sabato, Inside Elections, etc.)")
                 lines.append("<i>Safe seat — Forecaster consensus rating used in place of direct polling</i>")
             elif leader != "NO_DATA":
-                dem_avg = f"{poll_data['mean_dem']:.1f}%" if poll_data["mean_dem"] is not None and pd.notna(poll_data["mean_dem"]) else "N/A"
-                rep_avg = f"{poll_data['mean_rep']:.1f}%" if poll_data["mean_rep"] is not None and pd.notna(poll_data["mean_rep"]) else "N/A"
+                rep_avg = f"{poll_data['mean_rep']:.1f}%" if poll_data.get("mean_rep") is not None and pd.notna(poll_data["mean_rep"]) else "N/A"
+                dem_avg = f"{poll_data['mean_dem']:.1f}%" if poll_data.get("mean_dem") is not None and pd.notna(poll_data["mean_dem"]) else None
+                ind_avg = f"{poll_data['mean_ind']:.1f}%" if poll_data.get("mean_ind") is not None and pd.notna(poll_data["mean_ind"]) else None
                 other_avg = f"{poll_data['mean_other']:.1f}%" if poll_data.get("mean_other") is not None and pd.notna(poll_data["mean_other"]) else "N/A"
+                opponent_party = poll_data.get("opponent_party", "DEM")
 
                 if sub_cat == "IND":
-                    forecast_desc = "Independent / Other Leading"
+                    forecast_desc = "Independent Leading (> 2 pp)" if (margin is not None and margin > 2.0) else "Toss-Up / Slight Independent Lead (≤ 2 pp)"
                 elif sub_cat == "DEM":
                     forecast_desc = "Democrat Leading (> 2 pp)"
                 elif sub_cat == "DEM_LEAN":
@@ -295,18 +338,30 @@ def _build_tooltip(
                 else:
                     forecast_desc = "No Poll Data Available"
 
-                if sub_cat == "IND":
-                    margin_str = f"IND +{margin:.1f} pp" if margin is not None else "IND Lead"
+                if opponent_party == "IND":
+                    if margin is not None and margin > 0:
+                        margin_str = f"IND +{margin:.1f} pp"
+                    elif margin is not None and margin < 0:
+                        margin_str = f"REP +{abs(margin):.1f} pp"
+                    elif margin == 0:
+                        margin_str = "Tied (0.0 pp)"
+                    else:
+                        margin_str = "N/A"
+                    averages_str = f"REP {rep_avg} | IND {ind_avg} | Other/Undecided {other_avg}"
                 else:
-                    margin_str = f"DEM +{margin:.1f} pp" if (margin is not None and margin > 0) else (
-                        f"REP +{abs(margin):.1f} pp" if (margin is not None and margin < 0) else (
-                            "Tied (0.0 pp)" if margin == 0 else "N/A"
-                        )
-                    )
+                    if margin is not None and margin > 0:
+                        margin_str = f"DEM +{margin:.1f} pp"
+                    elif margin is not None and margin < 0:
+                        margin_str = f"REP +{abs(margin):.1f} pp"
+                    elif margin == 0:
+                        margin_str = "Tied (0.0 pp)"
+                    else:
+                        margin_str = "N/A"
+                    averages_str = f"DEM {dem_avg} | REP {rep_avg} | Other/Ind {other_avg}"
 
                 lines.append(f"<b>📊 2026 Poll Forecast:</b> {forecast_desc}")
                 lines.append(f"<b>Poll Margin:</b> {margin_str}")
-                lines.append(f"<b>Averages:</b> DEM {dem_avg} | REP {rep_avg} | Other/Ind {other_avg}")
+                lines.append(f"<b>Averages:</b> {averages_str}")
                 lines.append(f"<b>Polls Analyzed:</b> {n_polls}")
             else:
                 lines.append("<b>📊 2026 Poll Forecast:</b> No Poll Data Available")
@@ -423,6 +478,7 @@ def load_all_senators_data() -> pd.DataFrame:
                 "poll_margin": poll_info["margin"] if (is_contested and poll_info) else None,
                 "mean_dem": poll_info["mean_dem"] if (is_contested and poll_info) else None,
                 "mean_rep": poll_info["mean_rep"] if (is_contested and poll_info) else None,
+                "mean_ind": poll_info.get("mean_ind") if (is_contested and poll_info) else None,
                 "mean_other": poll_info["mean_other"] if (is_contested and poll_info) else None,
                 "n_polls": poll_info["n_polls"] if (is_contested and poll_info) else 0,
                 "cat_composition": cat_composition,
@@ -451,23 +507,31 @@ def get_flip_records(df: pd.DataFrame) -> List[dict]:
 def get_balance_of_power_summary(df: pd.DataFrame) -> dict:
     """
     Compute 100-seat balance of power summary metrics for the Majority Bar.
-    
+
     Returns breakdown across:
-    - safe_dem_ind: 34 seats (32 DEM + 2 IND)
-    - dem_holds: 9 seats
-    - dem_flips: 6 seats (from GOP)
-    - unpolled: 5 seats (3 DEM incumbent, 2 REP incumbent)
-    - rep_flips: 1 seat (from DEM)
-    - rep_holds: 14 seats
+    - safe_dem: 32 seats
+    - safe_ind: 2 seats (Angus King in ME, Bernie Sanders in VT)
     - safe_rep: 31 seats
-    - projected_dem_total: 52 seats
-    - projected_rep_total: 48 seats
-    - net_dem_gain: 5 seats
+    - dem_holds: seats
+    - dem_flips: seats (from GOP)
+    - ind_holds: seats
+    - ind_flips: seats
+    - unpolled: seats (unpolled contested seats)
+    - unpolled_dem: seats
+    - unpolled_rep: seats
+    - unpolled_ind: seats
+    - rep_flips: seats (from DEM or IND)
+    - rep_holds: seats
+    - projected_dem_total: DEM caucus total
+    - projected_ind_total: IND total
+    - projected_rep_total: REP total
+    - net_dem_gain: dem_flips - rep_flips
     """
     safe_seats = df[~df["is_contested_2026"]]
     contested_seats = df[df["is_contested_2026"]]
 
-    safe_dem_ind = len(safe_seats[safe_seats["party"].isin(["DEM", "IND"])])
+    safe_dem = len(safe_seats[safe_seats["party"] == "DEM"])
+    safe_ind = len(safe_seats[safe_seats["party"] == "IND"])
     safe_rep = len(safe_seats[safe_seats["party"] == "REP"])
 
     dem_holds = len(contested_seats[(contested_seats["party"] == "DEM") & (contested_seats["poll_leader"] == "DEM")])
@@ -478,25 +542,32 @@ def get_balance_of_power_summary(df: pd.DataFrame) -> dict:
     rep_flips = len(contested_seats[contested_seats["flip_type"] == "DEM_TO_REP"])
     ind_flips = len(contested_seats[contested_seats["flip_incoming_party"] == "IND"])
 
-    unpolled = len(contested_seats[contested_seats["poll_leader"] == "NO_DATA"])
-    unpolled_dem = len(contested_seats[(contested_seats["poll_leader"] == "NO_DATA") & (contested_seats["party"].isin(["DEM", "IND"]))])
+    unpolled_dem = len(contested_seats[(contested_seats["poll_leader"] == "NO_DATA") & (contested_seats["party"] == "DEM")])
     unpolled_rep = len(contested_seats[(contested_seats["poll_leader"] == "NO_DATA") & (contested_seats["party"] == "REP")])
+    unpolled_ind = len(contested_seats[(contested_seats["poll_leader"] == "NO_DATA") & (contested_seats["party"] == "IND")])
+    unpolled = unpolled_dem + unpolled_rep + unpolled_ind
 
-    # Independents caucus with the Democratic majority in the Senate baseline
-    projected_dem = safe_dem_ind + dem_holds + dem_flips + unpolled_dem + ind_holds + ind_flips
+    projected_dem = safe_dem + dem_holds + dem_flips + unpolled_dem
+    projected_ind = safe_ind + ind_holds + ind_flips + unpolled_ind
     projected_rep = safe_rep + rep_holds + rep_flips + unpolled_rep
 
     return {
-        "safe_dem_ind": safe_dem_ind,
+        "safe_dem": safe_dem,
+        "safe_ind": safe_ind,
+        "safe_rep": safe_rep,
+        "safe_dem_ind": safe_dem + safe_ind,
         "dem_holds": dem_holds,
         "dem_flips": dem_flips,
+        "ind_holds": ind_holds,
+        "ind_flips": ind_flips,
         "unpolled": unpolled,
         "unpolled_dem": unpolled_dem,
         "unpolled_rep": unpolled_rep,
+        "unpolled_ind": unpolled_ind,
         "rep_flips": rep_flips,
         "rep_holds": rep_holds,
-        "safe_rep": safe_rep,
         "projected_dem_total": projected_dem,
+        "projected_ind_total": projected_ind,
         "projected_rep_total": projected_rep,
         "net_dem_gain": dem_flips - rep_flips,
     }

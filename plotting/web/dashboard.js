@@ -44,22 +44,31 @@
 
     // Render Balance of Power Panel HTML dynamically
     function renderBalancePanel(s) {
+      const safeDem = s.safe_dem !== undefined ? s.safe_dem : (s.safe_dem_ind ? s.safe_dem_ind - (s.safe_ind || 2) : 32);
+      const safeInd = s.safe_ind !== undefined ? s.safe_ind : 2;
+      const projInd = s.projected_ind_total !== undefined ? s.projected_ind_total : 2;
 
       const barTally = document.getElementById('bar-header-tally');
       if (barTally) {
-        barTally.textContent = `DEM crosses 50-Seat Mark (${s.projected_dem_total} DEM vs. ${s.projected_rep_total} REP)`;
+        barTally.textContent = `Chamber Balance: ${s.projected_dem_total} DEM • ${projInd} IND • ${s.projected_rep_total} REP`;
       }
 
       const repFlipBar = s.rep_flips > 0
         ? `<div class="bar-seg seg-rep-flips" style="width: ${s.rep_flips}%;" title="${s.rep_flips} Republican Flip from DEM (${s.rep_flip_states})">+${s.rep_flips}★</div>`
         : '';
 
+      const indFlipBar = (s.ind_flips && s.ind_flips > 0)
+        ? `<div class="bar-seg seg-ind-flips" style="width: ${s.ind_flips}%;" title="${s.ind_flips} Independent Flip (${s.ind_flip_states || ''})">+${s.ind_flips}★</div>`
+        : '';
+
       const barTrack = document.getElementById('balance-bar-track');
       if (barTrack) {
         barTrack.innerHTML = `
-          <div class="bar-seg seg-dem-safe" style="width: ${s.safe_dem_ind}%;" title="${s.safe_dem_ind} Safe Democratic & Independent Seats">${s.safe_dem_ind} Safe</div>
+          <div class="bar-seg seg-dem-safe" style="width: ${safeDem}%;" title="${safeDem} Safe Democratic Seats">${safeDem} Safe</div>
           <div class="bar-seg seg-dem-holds" style="width: ${s.dem_holds}%;" title="${s.dem_holds} Democratic Poll Holds">${s.dem_holds} Holds</div>
           <div class="bar-seg seg-dem-flips" style="width: ${s.dem_flips}%;" title="${s.dem_flips} Democratic Flips from GOP (${s.dem_flip_states})">+${s.dem_flips}★</div>
+          <div class="bar-seg seg-ind-safe" style="width: ${safeInd}%;" title="${safeInd} Safe Independent Seats (Angus King ME, Bernie Sanders VT)">${safeInd}</div>
+          ${indFlipBar}
           <div class="bar-seg seg-unpolled" style="width: ${s.unpolled}%;" title="${s.unpolled} Seats with No General Election Polls (${s.unpolled_dem} DEM, ${s.unpolled_rep} REP)">${s.unpolled}</div>
           ${repFlipBar}
           <div class="bar-seg seg-rep-holds" style="width: ${s.rep_holds}%;" title="${s.rep_holds} Republican Poll Holds">${s.rep_holds} Holds</div>
@@ -70,8 +79,9 @@
       const sublegend = document.getElementById('bar-sublegend');
       if (sublegend) {
         sublegend.innerHTML = `
-          <span>🔵 <b>${s.projected_dem_total} DEM Coalition</b> (${s.safe_dem_ind} Safe + ${s.dem_holds} Holds + ${s.dem_flips} Flips + ${s.unpolled_dem} Unpolled)</span>
-          <span>🔴 <b>${s.projected_rep_total} Republican Party</b> (${s.safe_rep} Safe + ${s.rep_holds} Holds + ${s.rep_flips} Flips + ${s.unpolled_rep} Unpolled)</span>
+          <span>🔵 <b>${s.projected_dem_total} DEM</b> (${safeDem} Safe + ${s.dem_holds} Holds + ${s.dem_flips} Flips + ${s.unpolled_dem} Unpolled)</span>
+          <span>🟡 <b>${projInd} IND</b> (${safeInd} Safe: ME, VT)</span>
+          <span>🔴 <b>${s.projected_rep_total} REP</b> (${s.safe_rep} Safe + ${s.rep_holds} Holds + ${s.rep_flips} Flips + ${s.unpolled_rep} Unpolled)</span>
         `;
       }
 
@@ -79,12 +89,18 @@
         ? `<div class="legend-item"><span class="legend-swatch" style="background:#F87171;"></span> <b>+${s.rep_flips}</b> REP Flip (Gain)</div>`
         : '';
 
+      const indFlipLegend = (s.ind_flips && s.ind_flips > 0)
+        ? `<div class="legend-item"><span class="legend-swatch" style="background:#FACC15;"></span> <b>+${s.ind_flips}</b> IND Flip (Gain)</div>`
+        : '';
+
       const legendGrid = document.getElementById('bar-legend-grid');
       if (legendGrid) {
         legendGrid.innerHTML = `
-          <div class="legend-item"><span class="legend-swatch" style="background:#1E40AF;"></span> <b>${s.safe_dem_ind}</b> Safe DEM & IND</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#1E40AF;"></span> <b>${safeDem}</b> Safe DEM</div>
           <div class="legend-item"><span class="legend-swatch" style="background:#2563EB;"></span> <b>${s.dem_holds}</b> DEM Holds</div>
           <div class="legend-item"><span class="legend-swatch" style="background:#0284C7; border: 1px solid #38BDF8;"></span> <b>+${s.dem_flips}</b> DEM Flips (Gain)</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#EAB308;"></span> <b>${safeInd}</b> Safe IND (ME, VT)</div>
+          ${indFlipLegend}
           <div class="legend-item"><span class="legend-swatch" style="background:#64748B;"></span> <b>${s.unpolled}</b> Unpolled Seats</div>
           ${repFlipLegend}
           <div class="legend-item"><span class="legend-swatch" style="background:#DC2626;"></span> <b>${s.rep_holds}</b> REP Holds</div>
