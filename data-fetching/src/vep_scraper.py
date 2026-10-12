@@ -19,7 +19,6 @@ Verifies:
 import csv
 import io
 import os
-import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 import pandas as pd

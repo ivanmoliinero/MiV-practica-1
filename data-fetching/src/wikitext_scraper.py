@@ -40,7 +40,7 @@ def get_candidates_from_wikitext(session: requests.Session, page_title: str) -> 
             "party_1": None,
             "candidate_2": None,
             "party_2": None,
-        }
+        } # error processing, return None
     wikitext = data["parse"]["wikitext"]["*"]
 
     def extract_field(pattern: str) -> str | None:
