@@ -51,6 +51,24 @@ def is_polling_table(df: pd.DataFrame) -> bool:
     return has_poll and has_date
 
 
+def is_hypothetical_table(table_tag) -> bool:
+    """
+    Identifies whether a table is enclosed within a hypothetical polling block.
+    In Wikipedia, hypothetical head-to-head scenarios are placed inside collapsible
+    containers (e.g. {{hidden begin|title=Hypothetical polling}}) or under
+    explicit hypothetical headings.
+    """
+    for parent in table_tag.find_parents():
+        parent_classes = parent.get("class") or []
+        if any(cls in parent_classes for cls in ["hidden-begin", "mw-collapsible", "NavFrame"]):
+            title_tag = parent.find(class_=["hidden-title", "NavHead", "mw-collapsible-header"])
+            if title_tag and "hypothetical" in title_tag.get_text().lower():
+                return True
+            if "hypothetical" in str(parent.get("title", "")).lower():
+                return True
+    return False
+
+
 def parse_predictions_wikitable(table_tag) -> list[dict]:
     """
     Parses a Wikipedia predictions wikitable into clean records with
@@ -136,7 +154,7 @@ def extract_page_election_data(
                 inside_general_election = False
             inside_poll_section = False
             inside_pred_section = False
-        elif tag.name in ("h3", "h4") and inside_general_election:
+        elif tag.name == "h3" and inside_general_election:
             text = tag.get_text(strip=True).lower()
             if "polling" in text:
                 inside_poll_section = True
@@ -147,9 +165,19 @@ def extract_page_election_data(
             else:
                 inside_poll_section = False
                 inside_pred_section = False
+        elif tag.name == "h4" and inside_general_election:
+            text = tag.get_text(strip=True).lower()
+            # If already inside polling or predictions, maintain state for subsections (e.g. ranked-choice polls, FPTP polls)
+            # It failed with Alaska case.
+            if not inside_poll_section and not inside_pred_section:
+                if "polling" in text or "polls" in text:
+                    inside_poll_section = True
+                elif "prediction" in text or "rating" in text:
+                    inside_pred_section = True
         elif tag.name == "table" and inside_general_election:
             if inside_poll_section:
-                poll_tables_html.append(str(tag))
+                if not is_hypothetical_table(tag):
+                    poll_tables_html.append(str(tag))
             elif inside_pred_section and pred_table_tag is None:
                 pred_table_tag = tag
 
