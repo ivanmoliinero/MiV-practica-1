@@ -169,7 +169,14 @@ def build_rows_for_state(
                 if c not in cand_cols and not any(tok in str(c).lower() for tok in meta_exclude_tokens)
             ]
             src_col = find_matching_col(df, ["poll source", "source of poll", "pollster", "firm", "surveyor", "source"], exclude=["date"])
-            date_col = find_matching_col(df, ["date(s) administered", "dates administered", "date administered", "dates", "date"], exclude=["update"])
+            if is_agg_table:
+                # Prioritize 'Dates updated' for aggregated poll tables as it reflects the model's release timestamp
+                # If not available, use fallback column.
+                date_col = find_matching_col(df, ["dates updated", "date updated", "updated", "update"])
+                if not date_col:
+                    date_col = find_matching_col(df, ["date(s) administered", "dates administered", "date administered", "dates", "date"])
+            else:
+                date_col = find_matching_col(df, ["date(s) administered", "dates administered", "date administered", "dates", "date"], exclude=["update"])
 
             rep_pct = clean_pct_series(df[rep_col]) if rep_col else pd.Series([None] * len(df))
             dem_pct = clean_pct_series(df[dem_col]) if dem_col else pd.Series([None] * len(df))
