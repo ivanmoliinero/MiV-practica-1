@@ -382,6 +382,8 @@
         }
       }
 
+      // Event listener to change between filtered and non-filtered view
+      // of polls only or normal.
       filterCheckbox.addEventListener('change', (e) => {
         const checked = e.target.checked;
         const targetZ = checked ? pollsZOnly : pollsZCombined;

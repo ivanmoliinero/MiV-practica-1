@@ -297,16 +297,7 @@ body {
   background: #1E293B;
   border: 1px solid #334155;
   border-radius: 6px;
-  padding: 6px 12px;
-}
-
-.bar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.76rem;
-  margin-bottom: 12px;
-  color: #E2E8F0;
+  padding: 8px 12px;
 }
 
 .bar-wrapper {
@@ -316,7 +307,7 @@ body {
   background: #0B1120;
   border-radius: 5px;
   overflow: visible;
-  margin-bottom: 4px;
+  margin: 14px 0 6px 0;
 }
 
 .bar-track {
@@ -398,8 +389,8 @@ body {
 .majority-line {
   position: absolute;
   left: 50%;
-  top: -8px;
-  bottom: -8px;
+  top: -6px;
+  bottom: 0;
   width: 2px;
   background: #F8FAFC;
   box-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
@@ -409,7 +400,7 @@ body {
 
 .majority-label-pin {
   position: absolute;
-  top: -18px;
+  top: -16px;
   left: 50%;
   transform: translateX(-50%);
   background: #F8FAFC;
