@@ -48,11 +48,6 @@
       const safeInd = s.safe_ind !== undefined ? s.safe_ind : 2;
       const projInd = s.projected_ind_total !== undefined ? s.projected_ind_total : 2;
 
-      const barTally = document.getElementById('bar-header-tally');
-      if (barTally) {
-        barTally.textContent = `Chamber Balance: ${s.projected_dem_total} DEM • ${projInd} IND • ${s.projected_rep_total} REP`;
-      }
-
       const repFlipBar = s.rep_flips > 0
         ? `<div class="bar-seg seg-rep-flips" style="width: ${s.rep_flips}%;" title="${s.rep_flips} Republican Flip from DEM (${s.rep_flip_states})">+${s.rep_flips}★</div>`
         : '';
@@ -99,7 +94,7 @@
     let isFilterActive = false;
     try {
       isFilterActive = sessionStorage.getItem('senate_map_filter_only') === 'true';
-    } catch (e) {}
+    } catch (e) { }
 
     // Map traces definition
     const mapTraceHalves = {
@@ -187,7 +182,7 @@
     try {
       const raw = sessionStorage.getItem('senate_map_geo_state');
       if (raw) savedGeoState = JSON.parse(raw);
-    } catch (e) {}
+    } catch (e) { }
 
     const mapLayout = {
       autosize: true,
@@ -307,7 +302,7 @@
       if (state.scale !== undefined || state.center !== undefined) {
         try {
           sessionStorage.setItem('senate_map_geo_state', JSON.stringify(state));
-        } catch (e) {}
+        } catch (e) { }
       }
     }
 
@@ -401,7 +396,7 @@
 
         try {
           sessionStorage.setItem('senate_map_filter_only', checked ? 'true' : 'false');
-        } catch (err) {}
+        } catch (err) { }
       });
     }
 
@@ -411,7 +406,7 @@
       resetZoomBtn.addEventListener('click', () => {
         try {
           sessionStorage.removeItem('senate_map_geo_state');
-        } catch (e) {}
+        } catch (e) { }
 
         Plotly.relayout('map-plot', {
           'geo.projection.scale': 1.0,
