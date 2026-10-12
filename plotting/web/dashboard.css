@@ -2,7 +2,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   width: 100%;
   margin: 0;
@@ -161,7 +162,7 @@ html, body {
   border-radius: 3px;
   flex-shrink: 0;
   border: 1px solid #FFFFFF;
-  background-image: repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.8) 2px, rgba(255,255,255,0.8) 3.5px);
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255, 255, 255, 0.8) 2px, rgba(255, 255, 255, 0.8) 3.5px);
 }
 
 .legend-swatch-hatch.hatch-dem {
@@ -334,23 +335,41 @@ html, body {
   font-size: 0.70rem;
   font-weight: 700;
   color: #FFFFFF;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   white-space: nowrap;
   overflow: hidden;
 }
 
-.seg-dem-safe { background: #1E40AF; }
-.seg-dem-holds { background: #2563EB; }
+.seg-dem-safe {
+  background: #1E40AF;
+}
+
+.seg-dem-holds {
+  background: #2563EB;
+}
+
 .seg-dem-flips {
   background: #0284C7;
   border-top: 2px solid #38BDF8;
   border-bottom: 2px solid #38BDF8;
   box-shadow: inset 0 0 6px rgba(56, 189, 248, 0.6);
 }
-.seg-unpolled { background: #64748B; }
-.seg-rep-flips { background: #F87171; }
-.seg-rep-holds { background: #DC2626; }
-.seg-rep-safe { background: #991B1B; }
+
+.seg-unpolled {
+  background: #64748B;
+}
+
+.seg-rep-flips {
+  background: #F87171;
+}
+
+.seg-rep-holds {
+  background: #DC2626;
+}
+
+.seg-rep-safe {
+  background: #991B1B;
+}
 
 /* Majority threshold vertical line at 50% */
 .majority-line {
@@ -420,7 +439,9 @@ html, body {
 }
 
 /* Scattergeo labels styling */
-.scattergeo, .textpoint, .textpoint text {
+.scattergeo,
+.textpoint,
+.textpoint text {
   visibility: visible !important;
   opacity: 1 !important;
   font-weight: 700 !important;
@@ -499,195 +520,3 @@ path.choroplethlocation.hatch-no_data {
 path.choroplethlocation.hatch-tie {
   fill: url(#hatch-tie) !important;
 }
-
-/* Heatmap Active Mode State */
-#map-legend-bar.heatmap-mode .structure-pill,
-#map-legend-bar.heatmap-mode .legend-item-categorical,
-#map-legend-bar.heatmap-mode .legend-divider {
-  display: none !important;
-}
-
-/* Disable ONLY the contested-race filter toggle when heatmap is active */
-#map-legend-bar.heatmap-mode .filter-seats-toggle {
-  opacity: 0.45;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-/* Ensure the heatmap toggle is ALWAYS clickable and highlighted when active */
-.heatmap-view-toggle {
-  pointer-events: auto !important;
-  cursor: pointer !important;
-}
-
-#map-legend-bar.heatmap-mode .heatmap-view-toggle {
-  background: rgba(56, 189, 248, 0.15);
-  border-color: #38BDF8;
-  color: #38BDF8;
-  pointer-events: auto !important;
-  cursor: pointer !important;
-}
-
-.heatmap-mode-indicator {
-  display: none;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.70rem;
-  color: #94A3B8;
-  font-weight: 500;
-}
-
-#map-legend-bar.heatmap-mode .heatmap-mode-indicator {
-  display: inline-flex;
-}
-
-.heatmap-mode-tag {
-  background: rgba(56, 189, 248, 0.15);
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  color: #38BDF8;
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-/* Voter-weight heatmap unified continuous diverging scale (Compact 2-Row Design) */
-.heatmap-compact-row {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  height: 22px;
-}
-
-.heatmap-legend-party-rep {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: #F87171;
-  font-size: 0.68rem;
-}
-
-.heatmap-legend-party-dem {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: #60A5FA;
-  font-size: 0.68rem;
-}
-
-.heatmap-legend-center-info {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: #94A3B8;
-  font-size: 0.66rem;
-  background: rgba(30, 41, 59, 0.7);
-  border: 1px solid #334155;
-  padding: 1px 7px;
-  border-radius: 10px;
-}
-
-.party-indicator-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.party-indicator-dot.dot-rep {
-  background: #EF4444;
-  box-shadow: 0 0 5px rgba(239, 68, 68, 0.6);
-}
-
-.party-indicator-dot.dot-dem {
-  background: #3B82F6;
-  box-shadow: 0 0 5px rgba(59, 130, 246, 0.6);
-}
-
-.party-indicator-dot.dot-safe {
-  background: #1E293B;
-  border: 1px solid #64748B;
-}
-
-.heatmap-bar-container {
-  flex: 1;
-  max-width: 580px;
-  position: relative;
-  height: 22px;
-}
-
-.heatmap-continuous-bar {
-  width: 100%;
-  height: 9px;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: linear-gradient(
-    to right,
-    #7F1D1D 0%,
-    #991B1B 20%,
-    #DC2626 35%,
-    #FCA5A5 45%,
-    #FEE2E2 48.8%,
-    #1E293B 49.5%,
-    #1E293B 50.5%,
-    #DBEAFE 51.2%,
-    #93C5FD 55%,
-    #3B82F6 65%,
-    #2563EB 80%,
-    #1E3A8A 100%
-  );
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-.heatmap-ticks-track {
-  position: absolute;
-  top: 9px;
-  left: 0;
-  width: 100%;
-  height: 12px;
-}
-
-.heatmap-tick {
-  position: absolute;
-  top: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-.heatmap-tick:first-child {
-  transform: translateX(0);
-  align-items: flex-start;
-}
-
-.heatmap-tick:last-child {
-  transform: translateX(-100%);
-  align-items: flex-end;
-}
-
-.tick-val {
-  font-size: 0.62rem;
-  font-weight: 700;
-  color: #94A3B8;
-  line-height: 1.1;
-  white-space: nowrap;
-}
-
-.tick-val-center {
-  color: #F1F5F9;
-}
-
-.heatmap-subtext-formula {
-  font-size: 0.64rem;
-  color: #64748B;
-  font-style: italic;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-

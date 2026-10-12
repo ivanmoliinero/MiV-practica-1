@@ -23,10 +23,6 @@ from state_centroids import (
     STATE_TO_ABBREV,
     get_seat_symbol_coord,
 )
-try:
-    from heatmap_generator import generate_heatmap_data
-except ImportError:
-    from .heatmap_generator import generate_heatmap_data
 
 MODULE_DIR = Path(__file__).resolve().parent
 WEB_DATA_DIR = MODULE_DIR / "web" / "data"
@@ -96,9 +92,6 @@ def export_all() -> None:
         colorscale_items.append([i / k, color])
         colorscale_items.append([(i + 1) / k, color])
 
-    # Generate voter-weight heatmap metrics and legend assets
-    heatmap_data = generate_heatmap_data(df, state_names)
-
     legend_colors_combined_html = """
           <div class="legend-item"><span class="legend-swatch" style="background:#2563EB;"></span> <span>Dem Lead / Safe</span></div>
           <div class="legend-item"><span class="legend-swatch" style="background:#93C5FD;"></span> <span>Dem Toss-Up (≤2 pp)</span></div>
@@ -138,16 +131,8 @@ def export_all() -> None:
         "abbrevLons": abbrev_lons,
         "abbrevLats": abbrev_lats,
         "abbrevTexts": abbrev_texts,
-        "heatmapZ": heatmap_data["heatmap_z"],
-        "heatmapColorscale": heatmap_data["heatmap_colorscale"],
-        "heatmapTooltips": heatmap_data["heatmap_tooltips"],
-        "heatmapStateZ": heatmap_data["heatmap_state_z"],
-        "heatmapStateTooltips": heatmap_data["heatmap_state_tooltips"],
-        "heatmapZmin": heatmap_data["heatmap_zmin"],
-        "heatmapZmax": heatmap_data["heatmap_zmax"],
         "legendColorsCombinedHtml": legend_colors_combined_html,
         "legendColorsPollsOnlyHtml": legend_colors_polls_only_html,
-        "legendColorsHeatmapHtml": heatmap_data["legend_colors_heatmap_html"],
     }
 
     out_file = WEB_DATA_DIR / "senate_data.json"

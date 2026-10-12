@@ -38,16 +38,8 @@
       abbrevLons,
       abbrevLats,
       abbrevTexts,
-      heatmapZ,
-      heatmapColorscale,
-      heatmapTooltips,
-      heatmapStateZ,
-      heatmapStateTooltips,
-      heatmapZmin,
-      heatmapZmax,
       legendColorsCombinedHtml,
       legendColorsPollsOnlyHtml,
-      legendColorsHeatmapHtml,
     } = senateData;
 
     // Render Balance of Power Panel HTML dynamically
@@ -236,9 +228,6 @@
 
     // Apply diagonal hatch patterns and borders to Trace 0 paths
     function applyContestedStyles() {
-      const heatmapCb = document.getElementById('heatmap-toggle');
-      if (heatmapCb && heatmapCb.checked) return;
-
       const choroplethTraces = document.querySelectorAll('#map-plot g.trace.choropleth, #map-plot g.choropleth');
       if (!choroplethTraces || choroplethTraces.length === 0) return;
 
@@ -395,29 +384,6 @@
 
     // Wire in-map client-side filter toggle
     const filterCheckbox = document.getElementById('client-filter-toggle');
-    const heatmapCheckbox = document.getElementById('heatmap-toggle');
-    const legendBar = document.getElementById('map-legend-bar');
-
-    // Always reset heatmap toggle on page load to prevent stale browser form restore
-    if (heatmapCheckbox) {
-      heatmapCheckbox.checked = false;
-    }
-    if (legendBar) {
-      legendBar.classList.remove('heatmap-mode');
-    }
-
-    // Sync dynamic ceiling label in Row 1 indicator
-    if (heatmapZmax) {
-      const maxLabel = (heatmapZmax / 1e6).toFixed(1) + 'M';
-      const repEndpoint = document.getElementById('heatmap-rep-endpoint');
-      const demEndpoint = document.getElementById('heatmap-dem-endpoint');
-      if (repEndpoint) {
-        repEndpoint.innerHTML = `<span class="party-indicator-dot dot-rep"></span><span><b>REP</b> 0 → ~${maxLabel}</span>`;
-      }
-      if (demEndpoint) {
-        demEndpoint.innerHTML = `<span><b>DEM</b> 0 → ~${maxLabel}</span><span class="party-indicator-dot dot-dem"></span>`;
-      }
-    }
 
     if (filterCheckbox) {
       if (isFilterActive) {
@@ -429,7 +395,6 @@
 
       filterCheckbox.addEventListener('change', (e) => {
         const checked = e.target.checked;
-        if (heatmapCheckbox && heatmapCheckbox.checked) return;
         const targetZ = checked ? pollsZOnly : pollsZCombined;
 
         Plotly.restyle('map-plot', { z: [targetZ] }, [0]).then(() => {
@@ -443,82 +408,6 @@
         try {
           sessionStorage.setItem('senate_map_filter_only', checked ? 'true' : 'false');
         } catch (err) {}
-      });
-    }
-
-    // Wire voter-weight heatmap toggle
-    if (heatmapCheckbox) {
-      heatmapCheckbox.addEventListener('change', (e) => {
-        const isHeatmap = e.target.checked;
-
-        if (isHeatmap) {
-          if (legendBar) legendBar.classList.add('heatmap-mode');
-          clearContestedStyles();
-          if (filterCheckbox) filterCheckbox.disabled = true;
-
-          // 1. Hide split-halves trace 0 to eliminate any middle seam
-          // 2. Color whole-state outlines trace 1 with continuous heatmap data
-          // 3. Mute flip markers trace 3
-          Plotly.restyle('map-plot', { visible: false }, [0])
-            .then(() => {
-              return Plotly.restyle('map-plot', {
-                z: [heatmapStateZ],
-                colorscale: [heatmapColorscale],
-                zmin: heatmapZmin,
-                zmax: heatmapZmax,
-                hovertext: [heatmapStateTooltips],
-                hoverinfo: 'text',
-                'marker.line.color': '#000000',
-                'marker.line.width': 1.5,
-              }, [1]);
-            })
-            .then(() => {
-              return Plotly.restyle('map-plot', { visible: false }, [3]);
-            });
-
-          if (legendColorsContainer) {
-            legendColorsContainer.innerHTML = legendColorsHeatmapHtml;
-          }
-        } else {
-          if (legendBar) legendBar.classList.remove('heatmap-mode');
-          if (filterCheckbox) filterCheckbox.disabled = false;
-          const targetZ = (filterCheckbox && filterCheckbox.checked) ? pollsZOnly : pollsZCombined;
-
-          // 1. Reset whole-state trace 1 back to transparent outlines
-          // 2. Restore split-halves trace 0 with categorical data and white inner seat borders
-          // 3. Restore flip markers trace 3
-          Plotly.restyle('map-plot', {
-            z: [outlineZeros],
-            colorscale: [outlineTransparentColorscale],
-            hoverinfo: 'skip',
-            'marker.line.color': '#000000',
-            'marker.line.width': 2.0,
-          }, [1])
-            .then(() => {
-              return Plotly.restyle('map-plot', {
-                z: [targetZ],
-                colorscale: [normalColorscale],
-                zmin: normalZmin,
-                zmax: normalZmax,
-                hovertext: [tooltips],
-                visible: true,
-                'marker.line.width': 1.5,
-                'marker.line.color': '#FFFFFF',
-              }, [0]);
-            })
-            .then(() => {
-              return Plotly.restyle('map-plot', { visible: true }, [3]);
-            })
-            .then(() => {
-              applyContestedStyles();
-            });
-
-          if (legendColorsContainer) {
-            legendColorsContainer.innerHTML = (filterCheckbox && filterCheckbox.checked)
-              ? legendColorsPollsOnlyHtml
-              : legendColorsCombinedHtml;
-          }
-        }
       });
     }
 

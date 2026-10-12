@@ -12,7 +12,7 @@ En aquest codi es troba tot el codi per adquisició, preprocessament i disposici
 ## Set-up i Execució
 
 El projecte està estructurat en dos directoris:
-- **`data-fetching`**: Scripts per obtenir les dades oficials i d'enquestes sobre el Senat dels EUA i el cens electoral (VEP).
+- **`data-fetching`**: Scripts per obtenir les dades oficials i d'enquestes sobre el Senat dels EUA.
 - **`plotting`**: Preprocessament i visualització web interactiva.
 
 ### 1. Dependències de Python

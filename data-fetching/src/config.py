@@ -20,8 +20,6 @@ RESULTS_DIR = os.path.join(DATA_FETCHING_DIR, "results")
 JSON_PATH = os.path.join(DATA_SOURCES_DIR, "wikipedia-source-info.json")
 OUTPUT_CSV = os.path.join(RESULTS_DIR, "senate_2026_polls.csv")
 SENATORS_CSV = os.path.join(RESULTS_DIR, "senate_current_composition.csv")
-VEP_OUTPUT_CSV = os.path.join(RESULTS_DIR, "state_vep_2024.csv")
-VEP_SOURCE_URL = "https://election.lab.ufl.edu/data-downloads/turnoutdata/Turnout_2024G_v0.4.csv"
 
 # ---------------------------------------------------------------------------
 # Scraper & Network Parameters

@@ -10,7 +10,6 @@ from typing import Dict, List, Optional, Tuple
 import pandas as pd
 
 from state_centroids import STATE_TO_ABBREV
-from state_vep import STATE_VEP
 
 from functools import lru_cache
 
@@ -240,70 +239,6 @@ def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
     }
 
 
-# Estimated DEM polling percentage derived from the prediction margin proxies used in aggregate_state_polls().
-# These are the same fixed values assigned when converting rating strings to numeric scores:
-# Safe D / Solid D => margin=+15.0 => ~73% DEM share assuming average 2-party split
-# Likely D         => margin=+7.0  => ~62% DEM
-# Lean D           => margin=+2.0  => ~51% DEM
-# Toss-Up          => margin=0.0   => ~50% each
-# Lean R           => margin=-2.0  => ~49% DEM / ~51% REP
-# Likely R         => margin=-7.0  => ~38% DEM / ~62% REP
-# Safe R / Solid R => margin=-15.0 => ~27% DEM / ~73% REP
-_MARGIN_TO_DEM_PCT: dict[float, float] = {
-    15.0: 73.0,
-    7.0:  62.0,
-    2.0:  51.0,
-    0.0:  50.0,
-   -2.0:  49.0,
-   -7.0:  38.0,
-  -15.0:  27.0,
-}
-
-
-def compute_voter_weights(
-    state: str, poll_info: Optional[dict]
-) -> tuple[Optional[float], Optional[float], Optional[float]]:
-    """
-    Estimate the absolute number of voters supporting each leading candidate:
-      dem_weight = VEP(state) * mean_dem_pct / 100
-      rep_weight = VEP(state) * mean_rep_pct / 100
-      other_weight = VEP(state) * mean_other_pct / 100
-
-    For numeric-poll states:  uses real mean_dem / mean_rep / mean_other values.
-    For prediction-only states: uses a fixed percentage derived from the margin proxy
-                                (see _MARGIN_TO_DEM_PCT mapping above).
-    Returns (dem_weight, rep_weight, other_weight) or (None, None, None) if insufficient data.
-    """
-    if poll_info is None:
-        return None, None, None
-
-    vep = STATE_VEP.get(state)
-    if vep is None:
-        return None, None, None
-
-    if not poll_info.get("is_prediction", False):
-        # Real numeric polling: use mean_dem / mean_rep / mean_other directly
-        mean_dem = poll_info.get("mean_dem")
-        mean_rep = poll_info.get("mean_rep")
-        mean_other = poll_info.get("mean_other")
-        if mean_dem is None or mean_rep is None or pd.isna(mean_dem) or pd.isna(mean_rep):
-            return None, None, None
-        other_w = (
-            round(vep * mean_other / 100)
-            if mean_other is not None and pd.notna(mean_other)
-            else None
-        )
-        return round(vep * mean_dem / 100), round(vep * mean_rep / 100), other_w
-    else:
-        # Prediction-only: derive pct from the margin proxy
-        margin = poll_info.get("margin")
-        if margin is None:
-            return None, None, None
-        dem_pct = _MARGIN_TO_DEM_PCT.get(float(margin), 50.0 + float(margin) / 2)
-        rep_pct = 100.0 - dem_pct
-        return round(vep * dem_pct / 100), round(vep * rep_pct / 100), None
-
-
 def _build_tooltip(
     state: str,
     side_label: str,
@@ -314,9 +249,6 @@ def _build_tooltip(
     is_contested: bool,
     election_type: str,
     poll_data: Optional[dict] = None,
-    dem_weight: Optional[float] = None,
-    rep_weight: Optional[float] = None,
-    other_weight: Optional[float] = None,
 ) -> str:
     """Build a detailed HTML tooltip for a specific half-state polygon."""
     party_full = {"DEM": "Democrat", "REP": "Republican", "IND": "Independent"}.get(party, party)
@@ -379,18 +311,6 @@ def _build_tooltip(
             else:
                 lines.append("<b>📊 2026 Poll Forecast:</b> No Poll Data Available")
                 lines.append("<i>No general election polls found yet</i>")
-
-        # Append voter weight approximation if available
-        if dem_weight is not None and rep_weight is not None:
-            is_pred = poll_data.get("is_prediction", False) if poll_data else False
-            approx_note = " (estimated from forecast rating)" if is_pred else ""
-            lines.append("─────────────────────────────")
-            lines.append(f"<b>👥 Voter Weight{approx_note}:</b>")
-            lines.append(f"<b>DEM supporters:</b> ~{dem_weight:,.0f}")
-            lines.append(f"<b>REP supporters:</b> ~{rep_weight:,.0f}")
-            if other_weight is not None:
-                lines.append(f"<b>Other/Ind supporters:</b> ~{other_weight:,.0f}")
-            lines.append(f"<i>Based on 2024 VEP × polling %</i>")
     else:
         lines.append("─────────────────────────────")
         lines.append("🔒 <b>Status:</b> Safe Seat (No election in 2026)")
@@ -465,12 +385,6 @@ def load_all_senators_data() -> pd.DataFrame:
             else:
                 cat_polls_only = "SAFE_MUTED"
 
-            # Compute voter weights for contested seats only
-            if is_contested and poll_info:
-                dem_weight, rep_weight, other_weight = compute_voter_weights(state, poll_info)
-            else:
-                dem_weight, rep_weight, other_weight = None, None, None
-
             tooltip = _build_tooltip(
                 state=state,
                 side_label=side_label,
@@ -481,9 +395,6 @@ def load_all_senators_data() -> pd.DataFrame:
                 is_contested=is_contested,
                 election_type=election_type,
                 poll_data=poll_info if is_contested else None,
-                dem_weight=dem_weight if is_contested else None,
-                rep_weight=rep_weight if is_contested else None,
-                other_weight=other_weight if is_contested else None,
             )
 
             # Flip evaluation
@@ -523,9 +434,6 @@ def load_all_senators_data() -> pd.DataFrame:
                 "is_flip": is_flip,
                 "flip_type": flip_type,
                 "flip_incoming_party": flip_incoming_party,
-                "dem_voter_weight": dem_weight,
-                "rep_voter_weight": rep_weight,
-                "other_voter_weight": other_weight,
                 "tooltip": tooltip,
             })
 

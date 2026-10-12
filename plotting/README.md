@@ -6,7 +6,7 @@ A static, publication-grade data visualization communicating the 2026 US Senate 
 
 ## Architecture & Key Components
 
-- **`export_data.py`**: Preprocessing and serialization pipeline that merges polling data with incumbent Senate composition and electorate VEP, saving static JSON payloads and GeoJSONs to `web/data/`.
+- **`export_data.py`**: Preprocessing and serialization pipeline that merges polling data with incumbent Senate composition, saving static JSON payloads and GeoJSONs to `web/data/`.
 - **`web/`**: Standalone web application:
   - **`index.html`**: HTML5 layout markup, SVG pattern defs, containers, interactive controls, and balance panel.
   - **`dashboard.css`**: Pure CSS stylesheet for modern dark-theme presentation.
