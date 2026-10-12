@@ -10,7 +10,7 @@
   try {
     // Concurrent fetch of all required static data assets
     const [senateData, splitGeojson, outlinesGeojson] = await Promise.all([
-      fetch('./data/senate_data.json?t=1').then((r) => {
+      fetch('./data/senate_data.json').then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status} fetching senate_data.json`);
         return r.json();
       }),
@@ -61,7 +61,7 @@
         barTrack.innerHTML = `
           <div class="bar-seg seg-dem-safe" style="width: ${safeDem}%;" title="${safeDem} Safe Democratic Seats">${safeDem} Safe</div>
           <div class="bar-seg seg-dem-holds" style="width: ${s.dem_holds}%;" title="${s.dem_holds} Democratic Poll Holds">${s.dem_holds} Holds</div>
-          <div class="bar-seg seg-dem-flips" style="width: ${s.dem_flips}%;" title="${s.dem_flips} Democratic Flips from GOP (${s.dem_flip_states})">+${s.dem_flips}★</div>
+          <div class="bar-seg seg-dem-flips" style="width: ${s.dem_flips}%;" title="${s.dem_flips} Democratic Flips (${s.dem_flip_states})">+${s.dem_flips}</div>
           <div class="bar-seg seg-ind-safe" style="width: ${safeInd}%;" title="${safeInd} Safe Independent Seats">${safeInd}</div>
           ${indFlipBar}
           ${repFlipBar}

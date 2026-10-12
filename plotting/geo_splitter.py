@@ -81,6 +81,13 @@ def _split_state_geometry(geom, state_name: str) -> Tuple[object, object]:
 
     minx, miny, maxx, maxy = geom.bounds
     midx = (minx + maxx) / 2.0
+
+    # For Louisiana: the bounding box midpoint (-91.52°) intersects the western bend of the
+    # Mississippi River, creating a disconnected MultiPolygon on the eastern half and an uneven
+    # 66%/34% area split. Shifting midx to -92.10° produces two contiguous halves with a 50/50 area split.
+    if state_name == "Louisiana":
+        midx = -92.1
+
     eps = 0.005
 
     left_box = box(minx - eps, miny - eps, midx, maxy + eps)
