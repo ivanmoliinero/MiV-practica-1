@@ -201,16 +201,7 @@ def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
 
             # Partisan bias shrinkage (50% weight for declared partisan sponsor: (D), (R), (I))
             st = str(row.get("fuente_tipo", "")).strip().lower()
-            if not st:
-                src_str = str(row.get("fuente_encuesta", ""))
-                has_d = bool(re.search(r"\([dD]\)", src_str))
-                has_r = bool(re.search(r"\([rR]\)", src_str))
-                has_i = bool(re.search(r"\([iI]\)", src_str))
-                if sum([has_d, has_r, has_i]) == 1:
-                    bw = 0.5
-                else:
-                    bw = 1.0
-            elif st in ("individual_dem", "individual_rep", "individual_ind"):
+            if st in ("individual_dem", "individual_rep", "individual_ind"):
                 bw = 0.5
             else:
                 bw = 1.0
