@@ -10,7 +10,7 @@ Also generates merged 50-state perimeter outlines for high-contrast state border
 from collections import defaultdict
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Tuple
 
 import requests
 from shapely import make_valid, unary_union

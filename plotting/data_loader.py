@@ -14,10 +14,6 @@ import pandas as pd
 
 from state_centroids import STATE_TO_ABBREV
 
-from functools import lru_cache
-
-cache_data_decorator = lru_cache(maxsize=None)
-
 # Known poll aggregation sources
 AGGREGATORS = [
     "270towin",
@@ -486,7 +482,6 @@ def _build_tooltip(
     return "<br>".join(lines)
 
 
-@cache_data_decorator
 def load_all_senators_data() -> pd.DataFrame:
     """
     Construct the complete 100-row DataFrame (1 row per half-state polygon).
