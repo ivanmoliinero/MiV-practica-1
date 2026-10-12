@@ -391,7 +391,6 @@ def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
 
 def _build_tooltip(
     state: str,
-    side_label: str,
     senator: str,
     party: str,
     seat_class: str,
@@ -403,7 +402,7 @@ def _build_tooltip(
     """Build a detailed HTML tooltip for a specific half-state polygon."""
     party_full = {"DEM": "Democrat", "REP": "Republican", "IND": "Independent"}.get(party, party)
     lines = [
-        f"<b>🏛️ {state} ({side_label})</b>",
+        f"<b>🏛️ {state} ({senator})</b>",
         "─────────────────────────────",
         f"<b>Senator:</b> {senator} ({party_full})",
         f"<b>Seat Class:</b> {seat_class}",
@@ -532,7 +531,6 @@ def load_all_senators_data() -> pd.DataFrame:
             asumio_cargo = str(row_data["asumio_cargo"])
 
             feature_id = f"{state}_{side}"
-            side_label = "West Half — Safe" if not is_contested else "East Half — 2026 Race"
 
             # Category 1: Actual party (incumbent)
             cat_composition = party
@@ -551,7 +549,6 @@ def load_all_senators_data() -> pd.DataFrame:
 
             tooltip = _build_tooltip(
                 state=state,
-                side_label=side_label,
                 senator=senator_name,
                 party=party,
                 seat_class=seat_class,

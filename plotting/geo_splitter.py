@@ -89,12 +89,6 @@ def _split_state_geometry(geom, state_name: str) -> Tuple[object, object]:
     left_cut = _extract_polygons(geom.intersection(left_box))
     right_cut = _extract_polygons(geom.intersection(right_box))
 
-    # Fallback to original geometry if split resulted in empty slice
-    if left_cut is None or left_cut.is_empty:
-        left_cut = geom
-    if right_cut is None or right_cut.is_empty:
-        right_cut = geom
-
     return left_cut, right_cut
 
 
@@ -114,6 +108,7 @@ def generate_split_geojson(force_rebuild: bool = False) -> dict:
     features = []
 
     for feature in raw_data["features"]:
+        # Each feature corresponds to a state in the raw JSON.
         state_name = feature["properties"]["name"]
         raw_geom = shape(feature["geometry"])
 
