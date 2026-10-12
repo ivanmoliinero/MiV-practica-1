@@ -402,7 +402,7 @@ def _build_tooltip(
     """Build a detailed HTML tooltip for a specific half-state polygon."""
     party_full = {"DEM": "Democrat", "REP": "Republican", "IND": "Independent"}.get(party, party)
     lines = [
-        f"<b>🏛️ {state} ({senator})</b>",
+        f"<b>{state} ({senator})</b>",
         "─────────────────────────────",
         f"<b>Senator:</b> {senator} ({party_full})",
         f"<b>Seat Class:</b> {seat_class}",
@@ -411,7 +411,7 @@ def _build_tooltip(
 
     if is_contested:
         lines.append("─────────────────────────────")
-        lines.append(f"⚡ <b>2026 Senate Race:</b> {election_type}")
+        lines.append(f"<b>2026 Senate Race:</b> {election_type}")
         if poll_data:
             leader = poll_data["leader"]
             sub_cat = poll_data["sub_category"]
@@ -421,8 +421,8 @@ def _build_tooltip(
 
             if is_pred:
                 consensus_rating = poll_data.get("consensus_rating", "Safe")
-                lines.append(f"<b>📊 Race Forecast:</b> Forecaster Consensus ({consensus_rating})")
-                lines.append(f"<b>Forecasters Analyzed:</b> {n_polls} ratings (Cook, Sabato, Inside Elections, etc.)")
+                lines.append(f"<b>Race Forecast:</b> Forecaster Consensus ({consensus_rating})")
+                lines.append(f"<b>Forecasters Analyzed:</b> {n_polls} ratings ")
                 lines.append("<i>Safe seat — Forecaster consensus rating used in place of direct polling</i>")
             elif leader != "NO_DATA":
                 rep_avg = f"{poll_data['mean_rep']:.1f}%" if poll_data.get("mean_rep") is not None and pd.notna(poll_data["mean_rep"]) else "N/A"
@@ -467,16 +467,16 @@ def _build_tooltip(
                         margin_str = "N/A"
                     averages_str = f"DEM {dem_avg} | REP {rep_avg} | Other/Ind {other_avg}"
 
-                lines.append(f"<b>📊 2026 Poll Forecast:</b> {forecast_desc}")
+                lines.append(f"<b>2026 Poll Forecast:</b> {forecast_desc}")
                 lines.append(f"<b>Poll Margin:</b> {margin_str}")
                 lines.append(f"<b>Averages:</b> {averages_str}")
                 lines.append(f"<b>Polls Analyzed:</b> {poll_data.get('method_label', n_polls)}")
             else:
-                lines.append("<b>📊 2026 Poll Forecast:</b> No Poll Data Available")
+                lines.append("<b>2026 Poll Forecast:</b> No Poll Data Available")
                 lines.append("<i>No general election polls found yet</i>")
     else:
         lines.append("─────────────────────────────")
-        lines.append("🔒 <b>Status:</b> Safe Seat (No election in 2026)")
+        lines.append("<b>Status:</b> Safe Seat (No election in 2026)")
 
     return "<br>".join(lines)
 
