@@ -28,7 +28,7 @@ Per preprocessar les dades de les enquestes i generar els actius estàtics:
 ```bash
 python plotting/export_data.py
 ```
-*(Opcional: Si es volen regenerar els polígons GeoJSON partits dels 50 estats des de zero, es pot executar `python plotting/geo_splitter.py`).*
+Aquestes dades ja queden incloses en el repositori.
 
 ### 3. Servidor Local
 Per visualitzar el dashboard en local sense dependències externes no necessàries per la complexitat d'aquesta pràctica, utilitzem el servidor HTTP natiu de Python:

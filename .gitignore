@@ -4,12 +4,6 @@
 # Python caches
 **/__pycache__
 
-# Geojson
-**/*.geojson
-
-# Web data generated dynamically
-**/web/data
-
 # Virtual environments
 **/.venv
 
