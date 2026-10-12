@@ -44,9 +44,9 @@
 
     // Render Balance of Power Panel HTML dynamically
     function renderBalancePanel(s) {
-      const safeDem = s.safe_dem !== undefined ? s.safe_dem : (s.safe_dem_ind ? s.safe_dem_ind - (s.safe_ind || 2) : 32);
-      const safeInd = s.safe_ind !== undefined ? s.safe_ind : 2;
-      const projInd = s.projected_ind_total !== undefined ? s.projected_ind_total : 2;
+      const safeDem = s.safe_dem;
+      const safeInd = s.safe_ind;
+      const projInd = s.projected_ind_total;
 
       const repFlipBar = s.rep_flips > 0
         ? `<div class="bar-seg seg-rep-flips" style="width: ${s.rep_flips}%;" title="${s.rep_flips} Republican Flip from DEM (${s.rep_flip_states})">+${s.rep_flips}★</div>`
