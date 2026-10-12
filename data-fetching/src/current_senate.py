@@ -15,11 +15,11 @@ import pandas as pd
 
 try:
     from .config import RESULTS_DIR, SENATORS_CSV
-    from .client import fetch_with_backoff
+    from .client import fetch_with_backoff, create_session
     from .utils import normalize_party, clean_text_field
 except ImportError:
     from config import RESULTS_DIR, SENATORS_CSV
-    from client import fetch_with_backoff
+    from client import fetch_with_backoff, create_session
     from utils import normalize_party, clean_text_field
 
 log = logging.getLogger("senate_scraper")
@@ -70,21 +70,28 @@ def fetch_and_save_current_senators(session: requests.Session) -> dict[str, dict
         m_year = re.search(r"(202\d|203\d)", raw_class)
         next_year = int(m_year.group(1)) if m_year else None
 
-        is_in_play = (clase_num == 2)
-        election_type = "Regular (Clase 2)" if is_in_play else "No aplicable"
+        is_special = (state in ["Florida", "Ohio"] and clase_num == 3)
+        is_in_play = (clase_num == 2) or is_special
 
-        if state == "Florida" and clase_num == 3:
-            is_in_play = True
-            election_type = "Especial (Clase 3)"
-        elif state == "Ohio" and clase_num == 3:
-            is_in_play = True
-            election_type = "Especial (Clase 3)"
+        if is_special:
+            election_type = "Special Election"
+            seat_class_desc = f"Class {clase_num} (Special Election in 2026 • Term ends in 2028)"
+            next_year = 2026
+        elif clase_num == 2:
+            election_type = "Regular Election"
+            seat_class_desc = f"Class {clase_num} (Next Election: 2026 • Regular 6-Year Cycle)"
+            next_year = 2026
+        else:
+            election_type = "Not applicable"
+            target_year = next_year if next_year else (2030 if clase_num == 1 else 2028)
+            seat_class_desc = f"Class {clase_num} (Next Election: {target_year})" if clase_num else raw_class
+            next_year = target_year
 
         senators_rows.append({
             "estado": state,
             "senador": senator,
             "partido": party,
-            "clase": f"Clase {clase_num}" if clase_num else raw_class,
+            "clase": seat_class_desc,
             "año_proxima_eleccion": next_year,
             "en_juego_2026": is_in_play,
             "tipo_eleccion_2026": election_type,
@@ -108,3 +115,11 @@ def fetch_and_save_current_senators(session: requests.Session) -> dict[str, dict
     )
 
     return seats_in_play
+
+
+if __name__ == "__main__":
+    import sys
+    sys.path.insert(0, os.path.dirname(__file__))
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    sess = create_session()
+    fetch_and_save_current_senators(sess)

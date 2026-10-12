@@ -423,7 +423,6 @@ def _build_tooltip(
                 consensus_rating = poll_data.get("consensus_rating", "Safe")
                 lines.append(f"<b>Race Forecast:</b> Forecaster Consensus ({consensus_rating})")
                 lines.append(f"<b>Forecasters Analyzed:</b> {n_polls} ratings ")
-                lines.append("<i>Safe seat — Forecaster consensus rating used in place of direct polling</i>")
             elif leader != "NO_DATA":
                 rep_avg = f"{poll_data['mean_rep']:.1f}%" if poll_data.get("mean_rep") is not None and pd.notna(poll_data["mean_rep"]) else "N/A"
                 dem_avg = f"{poll_data['mean_dem']:.1f}%" if poll_data.get("mean_dem") is not None and pd.notna(poll_data["mean_dem"]) else None
