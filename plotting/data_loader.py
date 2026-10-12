@@ -116,7 +116,11 @@ def load_polls_csv(path: Optional[Path] = None) -> pd.DataFrame:
     return pd.read_csv(target)
 
 
-def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
+def aggregate_state_polls(
+    polls_df: pd.DataFrame,
+    state: str,
+    prioritize_aggregators: bool = True,
+) -> dict:
     """
     Compute poll aggregates (leader, sub_category, margin, DEM/REP/IND %, count) for a given state.
 
@@ -164,8 +168,8 @@ def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
     to_use = clean_polls[~clean_polls["fuente_encuesta"].astype(str).str.strip().str.lower().isin(["average", "mean"])]
 
     # Hierarchy Pillar A & B:
-    # 1. If aggregator polls exist in the state, use exclusively aggregators (unweighted mean).
-    # 2. Otherwise, use individual polls with exponential time weighting (half-life 28d) and partisan bias shrinkage.
+    # 1. If aggregator polls exist in the state and prioritize_aggregators is True, use exclusively aggregators (unweighted mean).
+    # 2. Otherwise, use all available polls (individual and aggregators) with exponential time weighting (half-life 28d) and partisan bias shrinkage.
     is_agg_mask = pd.Series([False] * len(to_use), index=to_use.index)
     if "fuente_tipo" in to_use.columns and to_use["fuente_tipo"].notna().any():
         is_agg_mask = to_use["fuente_tipo"].astype(str).str.strip().str.lower() == "aggregator"
@@ -176,7 +180,7 @@ def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
 
     agg_polls = to_use[is_agg_mask]
 
-    if not agg_polls.empty:
+    if prioritize_aggregators and not agg_polls.empty:
         # Level 1: Use exclusively aggregators
         mean_rep = float(agg_polls["porc_republicano_sillon_en_juego"].mean())
         mean_opp = float(agg_polls["porc_democrata_sillon_en_juego"].mean())
@@ -495,7 +499,7 @@ def _build_tooltip(
 
 
 @cache_data_decorator
-def load_all_senators_data() -> pd.DataFrame:
+def load_all_senators_data(prioritize_aggregators: bool = True) -> pd.DataFrame:
     """
     Construct the complete 100-row DataFrame (1 row per half-state polygon).
 
@@ -532,7 +536,7 @@ def load_all_senators_data() -> pd.DataFrame:
             left_is_contested = False
             right_is_contested = False
 
-        poll_info = aggregate_state_polls(polls_df, state) if has_race else None
+        poll_info = aggregate_state_polls(polls_df, state, prioritize_aggregators=prioritize_aggregators) if has_race else None
 
         for side, row_data, is_contested in [
             ("left", row_left, left_is_contested),

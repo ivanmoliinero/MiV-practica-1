@@ -43,36 +43,11 @@ def _generate_flip_badge_records(flips: List[dict]) -> List[dict]:
     return records
 
 
-def export_all() -> None:
-    """Preprocess data and generate all static web assets."""
-    WEB_DATA_DIR.mkdir(parents=True, exist_ok=True)
-
-    print("Loading data and GeoJSON collections...")
-    df = load_all_senators_data()
-    split_geojson = generate_split_geojson()
-    outlines_geojson = generate_state_outlines_geojson()
-
-
-    # Prepare datasets for map traces
-    polls_z_combined = df["code_combined"].tolist()
-    polls_z_only = df["code_polls_only"].tolist()
-    tooltips = df["tooltip"].tolist()
-    locs = df["feature_id"].tolist()
-    contested_patterns = {
-        row["feature_id"]: f"hatch-{row['cat_combined'].lower()}"
-        for _, row in df[df["is_contested_2026"]].iterrows()
-    }
-
-    state_names = [f["id"] for f in outlines_geojson["features"]]
-    abbrev_lats = [STATE_LOWER_RIGHT_COORDS[STATE_TO_ABBREV[s]][0] for s in state_names]
-    abbrev_lons = [STATE_LOWER_RIGHT_COORDS[STATE_TO_ABBREV[s]][1] for s in state_names]
-    abbrev_texts = [STATE_TO_ABBREV[s] for s in state_names]
-
-    # Flip records and chamber balance summary
+def _build_mode_dataset(df) -> dict:
+    """Extract mode-specific summary, badges, colors, tooltips, and patterns."""
     flips = get_flip_records(df)
     summary = get_balance_of_power_summary(df)
 
-    # Generate transfer badge records for projected flips
     records = _generate_flip_badge_records(flips)
     badges_data = {
         "none": {
@@ -83,6 +58,47 @@ def export_all() -> None:
             "texts": [b["text"] for b in records],
         }
     }
+
+    dem_flip_states = ", ".join(f["abbrev"] for f in flips if f["flip_incoming_party"] == "DEM")
+    rep_flip_states = ", ".join(f["abbrev"] for f in flips if f["flip_incoming_party"] == "REP")
+    ind_flip_states = ", ".join(f["abbrev"] for f in flips if f["flip_incoming_party"] == "IND")
+
+    summary["dem_flip_states"] = dem_flip_states
+    summary["rep_flip_states"] = rep_flip_states
+    summary["ind_flip_states"] = ind_flip_states
+
+    return {
+        "summary": summary,
+        "badges": badges_data,
+        "pollsZCombined": df["code_combined"].tolist(),
+        "pollsZOnly": df["code_polls_only"].tolist(),
+        "tooltips": df["tooltip"].tolist(),
+        "contestedPatterns": {
+            row["feature_id"]: f"hatch-{row['cat_combined'].lower()}"
+            for _, row in df[df["is_contested_2026"]].iterrows()
+        },
+    }
+
+
+def export_all() -> None:
+    """Preprocess data and generate all static web assets."""
+    WEB_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    print("Loading data and GeoJSON collections...")
+    df_agg = load_all_senators_data(prioritize_aggregators=True)
+    df_all = load_all_senators_data(prioritize_aggregators=False)
+    split_geojson = generate_split_geojson()
+    outlines_geojson = generate_state_outlines_geojson()
+
+    mode_agg = _build_mode_dataset(df_agg)
+    mode_all = _build_mode_dataset(df_all)
+
+    locs = df_agg["feature_id"].tolist()
+
+    state_names = [f["id"] for f in outlines_geojson["features"]]
+    abbrev_lats = [STATE_LOWER_RIGHT_COORDS[STATE_TO_ABBREV[s]][0] for s in state_names]
+    abbrev_lons = [STATE_LOWER_RIGHT_COORDS[STATE_TO_ABBREV[s]][1] for s in state_names]
+    abbrev_texts = [STATE_TO_ABBREV[s] for s in state_names]
 
     # Discrete colorscale for seat status
     k = len(COLOR_CATEGORIES)
@@ -109,25 +125,23 @@ def export_all() -> None:
           <div class="legend-item"><span class="legend-swatch" style="background:#1E293B; border: 1px solid #475569;"></span> <span>Safe / Muted (65 seats)</span></div>
     """
 
-    dem_flip_states = ", ".join(f["abbrev"] for f in flips if f["flip_incoming_party"] == "DEM")
-    rep_flip_states = ", ".join(f["abbrev"] for f in flips if f["flip_incoming_party"] == "REP")
-    ind_flip_states = ", ".join(f["abbrev"] for f in flips if f["flip_incoming_party"] == "IND")
-
-    summary["dem_flip_states"] = dem_flip_states
-    summary["rep_flip_states"] = rep_flip_states
-    summary["ind_flip_states"] = ind_flip_states
-
     payload = {
-        "summary": summary,
-        "badges": badges_data,
+        "modes": {
+            "aggregators": mode_agg,
+            "all_polls": mode_all,
+        },
+        "defaultMode": "aggregators",
+        # Top-level mirrors for backward compatibility
+        "summary": mode_agg["summary"],
+        "badges": mode_agg["badges"],
         "locs": locs,
-        "pollsZCombined": polls_z_combined,
-        "pollsZOnly": polls_z_only,
-        "tooltips": tooltips,
+        "pollsZCombined": mode_agg["pollsZCombined"],
+        "pollsZOnly": mode_agg["pollsZOnly"],
+        "tooltips": mode_agg["tooltips"],
+        "contestedPatterns": mode_agg["contestedPatterns"],
         "stateNames": state_names,
         "colorscale": colorscale_items,
         "numCategories": k,
-        "contestedPatterns": contested_patterns,
         "abbrevLons": abbrev_lons,
         "abbrevLats": abbrev_lats,
         "abbrevTexts": abbrev_texts,
@@ -140,7 +154,8 @@ def export_all() -> None:
         json.dump(payload, f, indent=2)
 
     print(f"Exported dashboard data to {out_file} ({out_file.stat().st_size:,d} bytes)")
-    print(f"Chamber projection: {summary['projected_dem_total']} DEM vs {summary['projected_rep_total']} REP")
+    print(f"Aggregators projection: {mode_agg['summary']['projected_dem_total']} DEM vs {mode_agg['summary']['projected_rep_total']} REP")
+    print(f"All-polls projection:   {mode_all['summary']['projected_dem_total']} DEM vs {mode_all['summary']['projected_rep_total']} REP")
 
 
 if __name__ == "__main__":

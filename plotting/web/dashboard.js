@@ -42,6 +42,34 @@
       legendColorsPollsOnlyHtml,
     } = senateData;
 
+    // Structured datasets for both polling modes
+    const modes = senateData.modes || {
+      aggregators: {
+        summary,
+        badges,
+        pollsZCombined,
+        pollsZOnly,
+        tooltips,
+        contestedPatterns,
+      },
+      all_polls: {
+        summary,
+        badges,
+        pollsZCombined,
+        pollsZOnly,
+        tooltips,
+        contestedPatterns,
+      },
+    };
+
+    let currentMode = 'aggregators';
+    try {
+      const savedMode = sessionStorage.getItem('senate_poll_source_mode');
+      if (savedMode && modes[savedMode]) {
+        currentMode = savedMode;
+      }
+    } catch (e) {}
+
     // Render Balance of Power Panel HTML dynamically
     function renderBalancePanel(s) {
       const safeDem = s.safe_dem !== undefined ? s.safe_dem : (s.safe_dem_ind ? s.safe_dem_ind - (s.safe_ind || 2) : 32);
@@ -87,7 +115,7 @@
       }
     }
 
-    renderBalancePanel(summary);
+    renderBalancePanel(modes[currentMode].summary);
 
     // Initial legend colors container
     const legendColorsContainer = document.getElementById('legend-colors-container');
@@ -107,13 +135,13 @@
       geojson: splitGeojson,
       locations: locs,
       featureidkey: 'id',
-      z: isFilterActive ? pollsZOnly : pollsZCombined,
+      z: isFilterActive ? modes[currentMode].pollsZOnly : modes[currentMode].pollsZCombined,
       colorscale: colorscale,
       zmin: -0.5,
       zmax: numCategories - 0.5,
       showscale: false,
       hoverinfo: 'text',
-      hovertext: tooltips,
+      hovertext: modes[currentMode].tooltips,
       marker: {
         line: { color: '#FFFFFF', width: 1.5 },
         opacity: 0.95,
@@ -153,7 +181,7 @@
       hoverinfo: 'skip',
     };
 
-    const activeBadges = badges['none'] || badges;
+    const activeBadges = modes[currentMode].badges['none'] || modes[currentMode].badges;
     const mapTraceFlips = {
       type: 'scattergeo',
       locationmode: 'USA-states',
@@ -260,9 +288,11 @@
         if (!loc && idx < locs.length) {
           loc = locs[idx];
         }
-        const patternClass = contestedPatterns[loc];
+        const activePatterns = (modes[currentMode] && modes[currentMode].contestedPatterns) || contestedPatterns;
+        const patternClass = activePatterns[loc];
         if (patternClass) {
           if (!p.classList.contains(patternClass)) {
+            p.classList.remove('hatch-dem', 'hatch-dem_lean', 'hatch-rep', 'hatch-rep_lean', 'hatch-ind', 'hatch-no_data', 'hatch-tie');
             p.classList.add('contested-seat', patternClass);
           }
         }
@@ -376,6 +406,62 @@
       ro.observe(mapPlot);
     }
 
+    // Wire poll source toggle (Aggregators Priority vs All Polls Combined)
+    const sourceToggle = document.getElementById('poll-source-toggle');
+    const sourceLabel = document.getElementById('poll-source-label');
+
+    function updateSourceToggleUI() {
+      if (!sourceToggle) return;
+      sourceToggle.checked = (currentMode === 'all_polls');
+      if (sourceLabel) {
+        sourceLabel.textContent = currentMode === 'all_polls'
+          ? 'Source: All Polls Combined'
+          : 'Source: Aggregators Priority';
+      }
+    }
+
+    updateSourceToggleUI();
+
+    function setPollingMode(newMode) {
+      if (!modes[newMode] || newMode === currentMode) return;
+      currentMode = newMode;
+      try {
+        sessionStorage.setItem('senate_poll_source_mode', currentMode);
+      } catch (err) {}
+
+      updateSourceToggleUI();
+
+      const activeData = modes[currentMode];
+      const targetZ = isFilterActive ? activeData.pollsZOnly : activeData.pollsZCombined;
+      const modeBadges = activeData.badges['none'] || activeData.badges;
+
+      // Update Halves choropleth (Trace 0)
+      Plotly.restyle('map-plot', {
+        z: [targetZ],
+        hovertext: [activeData.tooltips],
+      }, [0]).then(() => {
+        clearContestedStyles();
+        applyContestedStyles();
+      });
+
+      // Update Seat Flip markers (Trace 3)
+      Plotly.restyle('map-plot', {
+        lon: [modeBadges.lons],
+        lat: [modeBadges.lats],
+        'marker.color': [modeBadges.colors],
+        text: [modeBadges.texts],
+      }, [3]);
+
+      // Update Balance of Power Panel
+      renderBalancePanel(activeData.summary);
+    }
+
+    if (sourceToggle) {
+      sourceToggle.addEventListener('change', (e) => {
+        setPollingMode(e.target.checked ? 'all_polls' : 'aggregators');
+      });
+    }
+
     // Wire in-map client-side filter toggle
     const filterCheckbox = document.getElementById('client-filter-toggle');
 
@@ -389,7 +475,9 @@
 
       filterCheckbox.addEventListener('change', (e) => {
         const checked = e.target.checked;
-        const targetZ = checked ? pollsZOnly : pollsZCombined;
+        isFilterActive = checked;
+        const activeData = modes[currentMode];
+        const targetZ = checked ? activeData.pollsZOnly : activeData.pollsZCombined;
 
         Plotly.restyle('map-plot', { z: [targetZ] }, [0]).then(() => {
           applyContestedStyles();

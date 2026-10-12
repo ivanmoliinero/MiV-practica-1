@@ -257,6 +257,15 @@ body {
   margin: 0;
 }
 
+.map-control-toggle:has(input:checked) {
+  border-color: #38BDF8;
+  background: #0F172A;
+}
+
+.poll-source-toggle input:checked ~ span {
+  color: #38BDF8;
+}
+
 /* Balance of Power Panel */
 #balance-panel {
   flex-shrink: 0;
