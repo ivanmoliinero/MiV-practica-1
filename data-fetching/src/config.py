@@ -49,6 +49,7 @@ COLUMNS_ORDER = [
     "partido_candidato_actual_2",
     "candidato_actual_2",
     "fuente_encuesta",
+    "fuente_tipo",
     "fecha_encuesta",
     "porc_republicano_sillon_en_juego",
     "porc_democrata_sillon_en_juego",

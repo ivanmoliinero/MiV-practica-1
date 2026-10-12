@@ -6,6 +6,7 @@ source/date matching, phantom row filtering, and CSV export.
 """
 
 import os
+import re
 import logging
 import pandas as pd
 
@@ -29,6 +30,56 @@ except ImportError:
     )
 
 log = logging.getLogger("senate_scraper")
+
+AGGREGATOR_NAMES = [
+    "270towin",
+    "silver bulletin",
+    "fiftyplusone",
+    "realclearpolitics",
+    "decision desk hq",
+    "the hill",
+    "race to the wh",
+    "fivethirtyeight",
+    "the texas tribune",
+]
+
+
+def determine_source_type(
+    src: str | None,
+    is_agg_table: bool = False,
+    is_prediction: bool = False,
+) -> str | None:
+    """
+    Classifies a polling observation into:
+    - 'aggregator': Aggregated poll series (Silver Bulletin, 270toWin, FiftyPlusOne, Texas Tribune, etc.)
+    - 'individual_neutral': Independent pollster with no declared partisan sponsor
+    - 'individual_dem': Democratic campaign or partisan poll marked with (D)
+    - 'individual_rep': Republican campaign or partisan poll marked with (R)
+    - 'individual_ind': Independent campaign or partisan poll marked with (I)
+    - 'individual_bipartisan': Joint poll sponsored by multiple opposing entities (e.g. (D) and (R))
+    - 'prediction': Qualitative race ratings (Safe/Likely/Lean)
+    """
+    if is_prediction:
+        return "prediction"
+    if not src:
+        return None
+    s = str(src).strip()
+    s_low = s.lower()
+    if is_agg_table or any(agg in s_low for agg in AGGREGATOR_NAMES):
+        return "aggregator"
+    has_d = bool(re.search(r"\([dD]\)", s))
+    has_r = bool(re.search(r"\([rR]\)", s))
+    has_i = bool(re.search(r"\([iI]\)", s))
+    party_count = sum([has_d, has_r, has_i])
+    if party_count > 1:
+        return "individual_bipartisan"
+    if has_d:
+        return "individual_dem"
+    if has_r:
+        return "individual_rep"
+    if has_i:
+        return "individual_ind"
+    return "individual_neutral"
 
 
 def create_fallback_row(
@@ -56,6 +107,7 @@ def create_fallback_row(
         "partido_candidato_actual_2": party2 if cand2 else None,
         "candidato_actual_2": cand2,
         "fuente_encuesta": None,
+        "fuente_tipo": None,
         "fecha_encuesta": None,
         "porc_republicano_sillon_en_juego": None,
         "porc_democrata_sillon_en_juego": None,
@@ -97,6 +149,12 @@ def build_rows_for_state(
     rows = []
     if poll_tables:
         for df in poll_tables:
+            # If the table has a column named "source of poll aggregation", it is in fact describing aggregated results.
+            # We can use this mechanism or the hardcoded names for aggregation media.
+            is_agg_table = any(
+                "poll aggregation" in str(c).lower() or "source of poll aggregation" in str(c).lower()
+                for c in df.columns
+            )
             rep_col = next((c for c in df.columns if col_matches_candidate(c, rep_name)), None) if rep_name else None
             dem_col = next((c for c in df.columns if col_matches_candidate(c, dem_name)), None) if dem_name else None
             cand_cols = [c for c in [rep_col, dem_col] if c]
@@ -151,6 +209,8 @@ def build_rows_for_state(
                 ):
                     continue
 
+                fuente_tipo = determine_source_type(src_v, is_agg_table=is_agg_table)
+
                 rows.append({
                     "estado": state,
                     "año": YEAR,
@@ -161,6 +221,7 @@ def build_rows_for_state(
                     "partido_candidato_actual_2": party2,
                     "candidato_actual_2": cand2,
                     "fuente_encuesta": src_v,
+                    "fuente_tipo": fuente_tipo,
                     "fecha_encuesta": date_v,
                     "porc_republicano_sillon_en_juego": rep_v if pd.notna(rep_v) else None,
                     "porc_democrata_sillon_en_juego": dem_v if pd.notna(dem_v) else None,
@@ -181,6 +242,7 @@ def build_rows_for_state(
                 "partido_candidato_actual_2": party2,
                 "candidato_actual_2": cand2,
                 "fuente_encuesta": pred["source"],
+                "fuente_tipo": "prediction",
                 "fecha_encuesta": pred.get("date"),
                 "porc_republicano_sillon_en_juego": None,
                 "porc_democrata_sillon_en_juego": None,

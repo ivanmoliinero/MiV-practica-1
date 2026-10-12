@@ -7,6 +7,9 @@ mapping each senator to a geographic half-state feature ('<State>_left' or '<Sta
 
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+from datetime import datetime
+import math
+import re
 import pandas as pd
 
 from state_centroids import STATE_TO_ABBREV
@@ -14,6 +17,57 @@ from state_centroids import STATE_TO_ABBREV
 from functools import lru_cache
 
 cache_data_decorator = lru_cache(maxsize=None)
+
+# Known poll aggregation sources
+AGGREGATORS = [
+    "270towin",
+    "silver bulletin",
+    "fiftyplusone",
+    "realclearpolitics",
+    "decision desk hq",
+    "the hill",
+    "race to the wh",
+    "fivethirtyeight",
+    "the texas tribune",
+]
+
+MONTHS_LIST = [
+    "january", "february", "march", "april", "may", "june",
+    "july", "august", "september", "october", "november", "december"
+]
+MONTH_MAP = {m: i for i, m in enumerate(MONTHS_LIST, 1)}
+
+# Half-life for exponential temporal decay (28 days)
+HALF_LIFE_DAYS = 28.0
+DECAY_RATE_K = math.log(2.0) / HALF_LIFE_DAYS  # ~0.024755
+
+
+def parse_poll_end_date(d_str: str | None) -> Optional[datetime]:
+    """Extracts the fieldwork end date from standard polling date range strings."""
+    if not isinstance(d_str, str) or not d_str.strip():
+        return None
+    s = d_str.strip().replace("–", "-").replace("—", "-")
+    # 'through <Month> <day>, <year>'
+    m = re.search(r"through\s+([A-Za-z]+)\s+(\d{1,2}),?\s*(\d{4})", s, re.I)
+    if m and m.group(1).lower() in MONTH_MAP:
+        return datetime(int(m.group(3)), MONTH_MAP[m.group(1).lower()], int(m.group(2)))
+    # '<Month1> <day1> - <Month2> <day2>, <year>'
+    m = re.search(r"([A-Za-z]+)\s+\d{1,2}\s*-\s*([A-Za-z]+)\s+(\d{1,2}),?\s*(\d{4})", s)
+    if m and m.group(2).lower() in MONTH_MAP:
+        return datetime(int(m.group(4)), MONTH_MAP[m.group(2).lower()], int(m.group(3)))
+    # '<Month> <day1> - <day2>, <year>'
+    m = re.search(r"([A-Za-z]+)\s+\d{1,2}\s*-\s*(\d{1,2}),?\s*(\d{4})", s)
+    if m and m.group(1).lower() in MONTH_MAP:
+        return datetime(int(m.group(3)), MONTH_MAP[m.group(1).lower()], int(m.group(2)))
+    # '<Month> <day>, <year>'
+    m = re.search(r"([A-Za-z]+)\s+(\d{1,2}),?\s*(\d{4})", s)
+    if m and m.group(1).lower() in MONTH_MAP:
+        return datetime(int(m.group(3)), MONTH_MAP[m.group(1).lower()], int(m.group(2)))
+    # '<Month> <year>'
+    m = re.search(r"([A-Za-z]+)\s+(\d{4})", s)
+    if m and m.group(1).lower() in MONTH_MAP:
+        return datetime(int(m.group(2)), MONTH_MAP[m.group(1).lower()], 15)
+    return None
 
 # Standard categories and corresponding hex colors for the discrete colorscale
 COLOR_CATEGORIES: List[str] = [
@@ -109,16 +163,83 @@ def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
     # Filter out any aggregate average summary rows
     to_use = clean_polls[~clean_polls["fuente_encuesta"].astype(str).str.strip().str.lower().isin(["average", "mean"])]
 
-    if not to_use.empty:
-        mean_rep = to_use["porc_republicano_sillon_en_juego"].mean()
-        mean_opp = to_use["porc_democrata_sillon_en_juego"].mean()
-        mean_other = to_use["indecision"].mean() if "indecision" in to_use.columns else None
+    # Hierarchy Pillar A & B:
+    # 1. If aggregator polls exist in the state, use exclusively aggregators (unweighted mean).
+    # 2. Otherwise, use individual polls with exponential time weighting (half-life 28d) and partisan bias shrinkage.
+    is_agg_mask = pd.Series([False] * len(to_use), index=to_use.index)
+    if "fuente_tipo" in to_use.columns and to_use["fuente_tipo"].notna().any():
+        is_agg_mask = to_use["fuente_tipo"].astype(str).str.strip().str.lower() == "aggregator"
+    else:
+        is_agg_mask = to_use["fuente_encuesta"].astype(str).str.lower().apply(
+            lambda s: any(agg in s for agg in AGGREGATORS)
+        )
+
+    agg_polls = to_use[is_agg_mask]
+
+    if not agg_polls.empty:
+        # Level 1: Use exclusively aggregators
+        mean_rep = float(agg_polls["porc_republicano_sillon_en_juego"].mean())
+        mean_opp = float(agg_polls["porc_democrata_sillon_en_juego"].mean())
+        mean_other = (
+            float(agg_polls["indecision"].mean())
+            if "indecision" in agg_polls.columns and agg_polls["indecision"].notna().any()
+            else None
+        )
+        n_polls = len(agg_polls)
+        method_label = f"{n_polls} aggregator{'s' if n_polls > 1 else ''}"
+    elif not to_use.empty:
+        # Level 2 & 3: Individual polls with temporal decay and partisan shrinkage
+        parsed_dates = to_use["fecha_encuesta"].apply(parse_poll_end_date)
+        valid_dates = [d for d in parsed_dates if d is not None]
+        ref_date = max(valid_dates) if valid_dates else datetime(2026, 10, 10)
+
+        weights = []
+        for idx, row in to_use.iterrows():
+            d = parsed_dates.loc[idx]
+            days_ago = max(0, (ref_date - d).days) if d is not None else 60
+            tw = math.exp(-DECAY_RATE_K * days_ago)
+
+            # Partisan bias shrinkage (50% weight for declared partisan sponsor: (D), (R), (I))
+            st = str(row.get("fuente_tipo", "")).strip().lower()
+            if not st:
+                src_str = str(row.get("fuente_encuesta", ""))
+                has_d = bool(re.search(r"\([dD]\)", src_str))
+                has_r = bool(re.search(r"\([rR]\)", src_str))
+                has_i = bool(re.search(r"\([iI]\)", src_str))
+                if sum([has_d, has_r, has_i]) == 1:
+                    bw = 0.5
+                else:
+                    bw = 1.0
+            elif st in ("individual_dem", "individual_rep", "individual_ind"):
+                bw = 0.5
+            else:
+                bw = 1.0
+
+            weights.append(tw * bw)
+
+        weight_sum = sum(weights)
+        if weight_sum > 0:
+            mean_rep = float(sum(w * r for w, r in zip(weights, to_use["porc_republicano_sillon_en_juego"])) / weight_sum)
+            mean_opp = float(sum(w * d for w, d in zip(weights, to_use["porc_democrata_sillon_en_juego"])) / weight_sum)
+            valid_ind_mask = to_use["indecision"].notna() if "indecision" in to_use.columns else pd.Series([False] * len(to_use))
+            if valid_ind_mask.any():
+                w_ind_sum = sum(w for w, v in zip(weights, valid_ind_mask) if v)
+                mean_other = float(sum(w * o for w, o, v in zip(weights, to_use["indecision"], valid_ind_mask) if v) / w_ind_sum) if w_ind_sum > 0 else None
+            else:
+                mean_other = None
+        else:
+            mean_rep = float(to_use["porc_republicano_sillon_en_juego"].mean())
+            mean_opp = float(to_use["porc_democrata_sillon_en_juego"].mean())
+            mean_other = float(to_use["indecision"].mean()) if "indecision" in to_use.columns else None
+
         n_polls = len(to_use)
+        method_label = f"{n_polls} poll{'s' if n_polls > 1 else ''} (time-weighted)"
     else:
         mean_rep = None
         mean_opp = None
         mean_other = None
         n_polls = 0
+        method_label = "0 polls"
 
     if opponent_party == "IND":
         mean_dem = None
@@ -185,6 +306,7 @@ def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
             "mean_ind": mean_ind,
             "mean_other": mean_other,
             "n_polls": n_polls,
+            "method_label": method_label,
             "is_prediction": False,
             "consensus_rating": None,
         }
@@ -361,7 +483,7 @@ def _build_tooltip(
                 lines.append(f"<b>📊 2026 Poll Forecast:</b> {forecast_desc}")
                 lines.append(f"<b>Poll Margin:</b> {margin_str}")
                 lines.append(f"<b>Averages:</b> {averages_str}")
-                lines.append(f"<b>Polls Analyzed:</b> {n_polls}")
+                lines.append(f"<b>Polls Analyzed:</b> {poll_data.get('method_label', n_polls)}")
             else:
                 lines.append("<b>📊 2026 Poll Forecast:</b> No Poll Data Available")
                 lines.append("<i>No general election polls found yet</i>")
@@ -391,6 +513,7 @@ def load_all_senators_data() -> pd.DataFrame:
         abbrev = STATE_TO_ABBREV.get(state, "")
         state_rows = comp_df[comp_df["estado"] == state].copy()
 
+        # Mark state parts with elections in 2026.
         contested_mask = state_rows["en_juego_2026"].astype(str).str.lower() == "true"
         contested_rows = state_rows[contested_mask]
         stable_rows = state_rows[~contested_mask]
@@ -424,7 +547,7 @@ def load_all_senators_data() -> pd.DataFrame:
             feature_id = f"{state}_{side}"
             side_label = "West Half — Safe" if not is_contested else "East Half — 2026 Race"
 
-            # Category 1: Composition (incumbent party)
+            # Category 1: Actual party (incumbent)
             cat_composition = party
 
             # Category 2: Combined (Default view: safe seats = party, contested seats = poll result)
@@ -455,8 +578,8 @@ def load_all_senators_data() -> pd.DataFrame:
             is_flip = False
             flip_type = None
             flip_incoming_party = None
-            if is_contested and poll_info and poll_info["leader"] in ["DEM", "REP", "IND"]:
-                if party != poll_info["leader"]:
+            if is_contested and poll_info and poll_info["leader"] in ["DEM", "REP", "IND"]: # safe check
+                if party != poll_info["leader"]: # check flip
                     is_flip = True
                     flip_type = f"{party}_TO_{poll_info['leader']}"
                     flip_incoming_party = poll_info["leader"]
