@@ -84,6 +84,41 @@ def _generate_state_heatmap_tooltip(
                 f"<i>Formula: 2024 VEP (UF Election Lab) × Polling %</i>"
             )
             return -w, tip_html
+        elif leader == "IND":
+            margin = cont_row.get("poll_margin")
+            margin_str = f"IND +{margin:.1f} pp" if margin is not None else "Projected IND Lead"
+            other_w = cont_row.get("other_voter_weight")
+            mean_other = cont_row.get("mean_other")
+            pct = float(mean_other) if mean_other is not None and pd.notna(mean_other) else 0.0
+            w = float(other_w) if other_w is not None else (round(vep_val * pct / 100.0) if vep_val else 0)
+            tip_html = (
+                f"<b>🏛️ {state_name} — 2026 Voter Weight</b><br>"
+                f"─────────────────────────────<br>"
+                f"<b>Projected Winner:</b> Independent / Other ({margin_str})<br>"
+                f"<b>👥 Estimated Supporters:</b> ~{int(w):,d} voters<br>"
+                f"<b>State Eligible Population (VEP):</b> {vep_val:,d}<br>"
+                f"<b>Projected Vote Share:</b> {pct:.1f}%<br>"
+                f"<b>Contested Seat:</b> {senator_name} ({party_name})<br>"
+                f"─────────────────────────────<br>"
+                f"<i>Formula: 2024 VEP (UF Election Lab) × Polling %</i>"
+            )
+            return 0.0, tip_html
+        elif leader == "TIE":
+            tip_html = (
+                f"<b>🏛️ {state_name} — 2026 Voter Weight</b><br>"
+                f"─────────────────────────────<br>"
+                f"<b>Projected Winner:</b> Tied (0.0 pp)<br>"
+                f"<b>Contested Seat:</b> {senator_name} ({party_name})<br>"
+            )
+            return 0.0, tip_html
+        elif leader == "NO_DATA":
+            tip_html = (
+                f"<b>🏛️ {state_name} — 2026 Voter Weight</b><br>"
+                f"─────────────────────────────<br>"
+                f"<b>Status:</b> Contested seat without general election polling<br>"
+                f"<b>Contested Seat:</b> {senator_name} ({party_name})<br>"
+            )
+            return 0.0, tip_html
 
     # Safe state without 2026 Senate election
     tip_html = (

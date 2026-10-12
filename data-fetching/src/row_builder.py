@@ -100,11 +100,16 @@ def build_rows_for_state(
             rep_col = next((c for c in df.columns if col_matches_candidate(c, rep_name)), None) if rep_name else None
             dem_col = next((c for c in df.columns if col_matches_candidate(c, dem_name)), None) if dem_name else None
             cand_cols = [c for c in [rep_col, dem_col] if c]
-            unk_cols = find_all_matching_cols(
-                df,
-                ["undecided", "don't know", "dk", "other/undecided", "other", "neither"],
-                exclude=["date", "margin", "sample", "poll", "source"] + cand_cols,
-            )
+            # Exclude known metadata tokens so any remaining columns (third party, independent, other, undecided) are aggregated
+            meta_exclude_tokens = [
+                "date", "dates", "administered", "update", "sample",
+                "margin", "error", "poll", "source", "firm", "surveyor",
+                "lead", "spread", "notes", "ref", "link",
+            ]
+            unk_cols = [
+                c for c in df.columns
+                if c not in cand_cols and not any(tok in str(c).lower() for tok in meta_exclude_tokens)
+            ]
             src_col = find_matching_col(df, ["poll source", "source of poll", "pollster", "firm", "surveyor", "source"], exclude=["date"])
             date_col = find_matching_col(df, ["date(s) administered", "dates administered", "date administered", "dates", "date"], exclude=["update"])
 
