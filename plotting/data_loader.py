@@ -106,9 +106,8 @@ def aggregate_state_polls(polls_df: pd.DataFrame, state: str) -> dict:
         how="any",
     )
 
-    # Prefer individual polls if available; fallback to all valid rows
-    individual = clean_polls[clean_polls["fuente_encuesta"] != "Average"]
-    to_use = individual if not individual.empty else clean_polls
+    # Filter out any aggregate average summary rows
+    to_use = clean_polls[~clean_polls["fuente_encuesta"].astype(str).str.strip().str.lower().isin(["average", "mean"])]
 
     if not to_use.empty:
         mean_rep = to_use["porc_republicano_sillon_en_juego"].mean()

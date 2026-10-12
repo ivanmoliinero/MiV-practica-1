@@ -104,7 +104,7 @@ def build_rows_for_state(
             meta_exclude_tokens = [
                 "date", "dates", "administered", "update", "sample",
                 "margin", "error", "poll", "source", "firm", "surveyor",
-                "lead", "spread", "notes", "ref", "link",
+                "lead", "spread", "notes", "ref", "link", "average", "mean",
             ]
             unk_cols = [
                 c for c in df.columns
@@ -137,6 +137,18 @@ def build_rows_for_state(
 
                 # Discard rows that are not head-to-head general election matchups
                 if pd.isna(rep_v) or pd.isna(dem_v):
+                    continue
+
+                # Discard synthetic summary / average rows (e.g. "Average", "Mean") from aggregate poll tables
+                src_clean = str(src_v).strip().lower() if src_v else ""
+                date_clean = str(date_v).strip().lower() if date_v else ""
+                if (
+                    src_clean in ("average", "mean", "summary")
+                    or src_clean.startswith("average")
+                    or src_clean.endswith("average")
+                    or "polling average" in src_clean
+                    or date_clean in ("average", "mean")
+                ):
                     continue
 
                 rows.append({
