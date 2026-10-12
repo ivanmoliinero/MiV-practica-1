@@ -169,7 +169,7 @@ def aggregate_state_polls(
 
     # Hierarchy Pillar A & B:
     # 1. If aggregator polls exist in the state and prioritize_aggregators is True, use exclusively aggregators (unweighted mean).
-    # 2. Otherwise, use all available polls (individual and aggregators) with exponential time weighting (half-life 28d) and partisan bias shrinkage.
+    # 2. Otherwise, if prioritize_aggregators is False, exclude aggregators completely and use only individual polls.
     is_agg_mask = pd.Series([False] * len(to_use), index=to_use.index)
     if "fuente_tipo" in to_use.columns and to_use["fuente_tipo"].notna().any():
         is_agg_mask = to_use["fuente_tipo"].astype(str).str.strip().str.lower() == "aggregator"
@@ -179,6 +179,10 @@ def aggregate_state_polls(
         )
 
     agg_polls = to_use[is_agg_mask]
+
+    # If filtering aggregators, exclude all aggregator rows completely from to_use
+    if not prioritize_aggregators:
+        to_use = to_use[~is_agg_mask]
 
     if prioritize_aggregators and not agg_polls.empty:
         # Level 1: Use exclusively aggregators
@@ -205,16 +209,7 @@ def aggregate_state_polls(
 
             # Partisan bias shrinkage (50% weight for declared partisan sponsor: (D), (R), (I))
             st = str(row.get("fuente_tipo", "")).strip().lower()
-            if not st:
-                src_str = str(row.get("fuente_encuesta", ""))
-                has_d = bool(re.search(r"\([dD]\)", src_str))
-                has_r = bool(re.search(r"\([rR]\)", src_str))
-                has_i = bool(re.search(r"\([iI]\)", src_str))
-                if sum([has_d, has_r, has_i]) == 1:
-                    bw = 0.5
-                else:
-                    bw = 1.0
-            elif st in ("individual_dem", "individual_rep", "individual_ind"):
+            if st in ("individual_dem", "individual_rep", "individual_ind"):
                 bw = 0.5
             else:
                 bw = 1.0

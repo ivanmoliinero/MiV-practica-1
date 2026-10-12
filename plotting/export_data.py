@@ -154,8 +154,8 @@ def export_all() -> None:
         json.dump(payload, f, indent=2)
 
     print(f"Exported dashboard data to {out_file} ({out_file.stat().st_size:,d} bytes)")
-    print(f"Aggregators projection: {mode_agg['summary']['projected_dem_total']} DEM vs {mode_agg['summary']['projected_rep_total']} REP")
-    print(f"All-polls projection:   {mode_all['summary']['projected_dem_total']} DEM vs {mode_all['summary']['projected_rep_total']} REP")
+    print(f"Aggregators projection:    {mode_agg['summary']['projected_dem_total']} DEM vs {mode_agg['summary']['projected_rep_total']} REP")
+    print(f"Individual-polls projection: {mode_all['summary']['projected_dem_total']} DEM vs {mode_all['summary']['projected_rep_total']} REP")
 
 
 if __name__ == "__main__":

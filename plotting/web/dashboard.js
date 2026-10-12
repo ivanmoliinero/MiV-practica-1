@@ -406,7 +406,7 @@
       ro.observe(mapPlot);
     }
 
-    // Wire poll source toggle (Aggregators Priority vs All Polls Combined)
+    // Wire poll source toggle (Aggregators Priority vs Individual Polls Only)
     const sourceToggle = document.getElementById('poll-source-toggle');
     const sourceLabel = document.getElementById('poll-source-label');
 
@@ -415,7 +415,7 @@
       sourceToggle.checked = (currentMode === 'all_polls');
       if (sourceLabel) {
         sourceLabel.textContent = currentMode === 'all_polls'
-          ? 'Source: All Polls Combined'
+          ? 'Source: Individual Polls Only'
           : 'Source: Aggregators Priority';
       }
     }
